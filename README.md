@@ -10,3 +10,11 @@ Nano Image Server is a tiny, blazingly fast service to serve images with support
 2. Image operation on fly via url queries
 3. Support for GPU Acceleration
 4. Simple Image browsing utility
+5. Caching and Instant Retrieval
+
+## Working
+
+The following request returns a processed image of resolution 1920x1080px with black and white filter
+```
+https://<imageserver>.com/image/Nature.jpg?resx=1920&resy=1080&filter=bw
+```
