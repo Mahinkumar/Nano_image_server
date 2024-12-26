@@ -36,7 +36,7 @@ start nano_image_server.exe #Windows
 
 ## Benchmarks 
 
-### Nano_image_server **v0.0.1** With ApacheBench on 24 Threads (Balanced Power Mode on a Laptop)
+### Nano_image_server **v0.1.0-alpha** With ApacheBench on 24 Threads (Balanced Power Mode on a Laptop)
 ```markdown
 # Command 
 ab -n 1000 -c 24 -k http://localhost:8000/image/in.jpg?resx=1080&resy=1920
