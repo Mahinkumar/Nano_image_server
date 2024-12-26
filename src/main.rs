@@ -25,14 +25,19 @@ fn default_param() -> ProcessParameters{
 #[tokio::main]
 async fn main() {
     // Image processing Test code
-    
-    
     let app = Router::new()
     .route("/image/:image", get(handler));
 
+    let addr = "0.0.0.0";
+    let port = 8000;
+    println!("Nano Image Server Running...");
+    println!("Serving on http://localhost:{port}/image");
+
+    let final_addr = format!("{addr}:{port}");
+
 
     // run our app with hyper, listening globally on port 8000
-    let listener = tokio::net::TcpListener::bind("0.0.0.0:8000").await.unwrap();
+    let listener = tokio::net::TcpListener::bind(final_addr).await.unwrap();
     axum::serve(listener, app).await.unwrap();
 }
 
@@ -51,7 +56,7 @@ async fn handler(
             ),
             photon_rs::native::Error::IoError(_error) => return (
                 [(header::CONTENT_TYPE, "message")],
-                axum::body::Body::from("File Error")
+                axum::body::Body::from("File I/O Error")
             ),
         }
     };
