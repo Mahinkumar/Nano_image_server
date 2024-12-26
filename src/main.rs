@@ -7,16 +7,19 @@ use axum::routing::get;
 use axum::Router;
 
 use photon_rs::transform::resize;
-use tower_http::services::ServeDir;
 
-use photon_rs::channels::alter_blue_channel;
 use photon_rs::native::open_image;
 use serde::Deserialize;
 
 #[derive(Deserialize,Debug)]
+#[serde(default = "default_param")]
 struct ProcessParameters{
     resx: u32,
     resy: u32
+}
+
+fn default_param() -> ProcessParameters{
+    ProcessParameters{ resx: 0 , resy: 0}
 }
 
 #[tokio::main]
@@ -25,8 +28,7 @@ async fn main() {
     
     
     let app = Router::new()
-    .route_service("/images", ServeDir::new("images"))
-    .route("/processed/:image", get(handler));
+    .route("/image/:image", get(handler));
 
 
     // run our app with hyper, listening globally on port 8000
@@ -38,15 +40,28 @@ async fn handler(
     Path(image): Path<String>,
     Query(process_params): Query<ProcessParameters>,
 ) -> impl IntoResponse {
-    println!("{:?}", process_params);
-    
     let input_path = format!("./images/{}", image);
-    let mut img = open_image(&input_path)
-        .expect("File should open");
-    
-    resize(&img, process_params.resx, process_params.resy, photon_rs::transform::SamplingFilter::Nearest);
-    
-    let jpeg_bytes = img.get_bytes_jpeg(255);
+
+    let img = match open_image(&input_path) {
+        Ok(img) => img,
+        Err(img) => match img {
+            photon_rs::native::Error::ImageError(_image_error) => return (
+                [(header::CONTENT_TYPE, "message")],
+                axum::body::Body::from("Image Error")
+            ),
+            photon_rs::native::Error::IoError(_error) => return (
+                [(header::CONTENT_TYPE, "message")],
+                axum::body::Body::from("File Error")
+            ),
+        }
+    };
+
+    let mut no_resize = false;
+    if process_params.resx == 0{ no_resize = true };
+    if process_params.resy == 0{ no_resize = true };
+
+    let final_image = if !no_resize {resize(&img, process_params.resx, process_params.resy, photon_rs::transform::SamplingFilter::Nearest)}else{img};
+    let jpeg_bytes = final_image.get_bytes_webp();
     
     // Convert Vec<u8> to axum::body::Body
     (
