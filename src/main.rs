@@ -6,9 +6,12 @@ use axum::response::IntoResponse;
 use axum::routing::get;
 use axum::{Router, ServiceExt};
 
-use photon_rs::transform::resize;
+//use photon_rs::transform::resize;
+//use photon_rs::native::open_image;
 
-use photon_rs::native::open_image;
+use std::io::Cursor;
+use image::ImageReader;
+
 use serde::Deserialize;
 
 use std::net::SocketAddr;
@@ -59,18 +62,12 @@ async fn handler(
     //let before = Instant::now();
     let input_path = format!("./images/{}", image);
 
-    let img = match open_image(&input_path) {
-        Ok(img) => img,
-        Err(img) => match img {
-            photon_rs::native::Error::ImageError(_image_error) => return (
-                [(header::CONTENT_TYPE, "message")],
-                axum::body::Body::from("Image Error")
-            ),
-            photon_rs::native::Error::IoError(_error) => return (
+    let img = match ImageReader::open(input_path) {
+        Ok(img) => img.decode().expect("Unable to decode"),
+        Err(_img) => return (
                 [(header::CONTENT_TYPE, "message")],
                 axum::body::Body::from("File I/O Error")
             ),
-        }
     };
 
     let mut no_resize = false;
@@ -78,14 +75,15 @@ async fn handler(
     if process_params.resy == 0{ no_resize = true };
 
     //println!("After Image open: {:.2?}", before.elapsed());
+    let mut bytes: Vec<u8> = Vec::new();
 
-    let final_image = if !no_resize {resize(&img, process_params.resx, process_params.resy, photon_rs::transform::SamplingFilter::CatmullRom)}else{img};
-    let jpeg_bytes = final_image.get_bytes_webp();
+    let final_image = if !no_resize {img.resize(process_params.resx, process_params.resy, image::imageops::FilterType::CatmullRom)} else {img};
+    final_image.write_to(&mut Cursor::new(&mut bytes), image::ImageFormat::Png).expect("Unable to write");
     
     //println!("After Process: {:.2?}", before.elapsed());
     // Convert Vec<u8> to axum::body::Body
     (
         [(header::CONTENT_TYPE, "image/jpeg")],
-        axum::body::Body::from(jpeg_bytes)
+        axum::body::Body::from(bytes)
     )
 }
