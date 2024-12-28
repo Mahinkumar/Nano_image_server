@@ -72,7 +72,7 @@ async fn handler(
     let mut bytes: Vec<u8> = Vec::new();
 
     let final_image = if !no_resize {img.resize(process_params.resx, process_params.resy, image::imageops::FilterType::CatmullRom)} else {img};
-    final_image.write_to(&mut Cursor::new(&mut bytes), image::ImageFormat::Png).expect("Unable to write");
+    final_image.write_to(&mut Cursor::new(&mut bytes), image::ImageFormat::Jpeg).expect("Unable to write");
     
     //println!("After Process: {:.2?}", before.elapsed());
     // Convert Vec<u8> to axum::body::Body
