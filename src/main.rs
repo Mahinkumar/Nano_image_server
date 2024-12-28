@@ -5,16 +5,11 @@ use axum::http::header;
 use axum::response::IntoResponse;
 use axum::routing::get;
 use axum::{Router, ServiceExt};
-
-//use photon_rs::transform::resize;
-//use photon_rs::native::open_image;
-
 use std::io::Cursor;
+use std::net::SocketAddr;
 use image::ImageReader;
 
 use serde::Deserialize;
-
-use std::net::SocketAddr;
 //use std::time::Instant; // For timing functions
 
 #[derive(Deserialize,Debug)]
