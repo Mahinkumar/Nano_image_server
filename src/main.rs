@@ -19,7 +19,6 @@ use std::net::SocketAddr;
 
 #[derive(Deserialize,Debug)]
 #[serde(default = "default_param")]
-
 struct ProcessParameters{
     resx: u32,
     resy: u32
