@@ -3,7 +3,8 @@
 > The Processing algorithms are far from optimal and will undergo massive Improvements. <br>
 > Star the repository for progress updates.
 
-![Rust Linux Worklflow](https://github.com/mahinkumar/Nano_image_server/actions/workflows/rust.yml/badge.svg)
+![Rust-Linux Worklflow](https://github.com/mahinkumar/Nano_image_server/actions/workflows/Rust_Linux.yml/badge.svg)
+![Rust-Windows Worklflow](https://github.com/mahinkumar/Nano_image_server/actions/workflows/Rust_Windows.yml/badge.svg)
 
 # Nano Image Server
 Nano Image Server is a tiny, blazingly fast service to serve images with support for image operation on fly.
