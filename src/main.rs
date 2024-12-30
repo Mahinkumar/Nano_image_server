@@ -16,11 +16,12 @@ use serde::Deserialize;
 #[serde(default = "default_param")]
 struct ProcessParameters{
     resx: u32,
-    resy: u32
+    resy: u32,
+    resfilter: String
 }
 
 fn default_param() -> ProcessParameters{
-    ProcessParameters{ resx: 0 , resy: 0}
+    ProcessParameters{ resx: 0 , resy: 0, resfilter: "Optimal".to_string()}
 }
 
 const ADDR: [u8; 4] = [127, 0, 0, 1];
@@ -82,10 +83,12 @@ async fn handler(
         match ImageReader::open(input_path) {
             Ok(img) => {
                 let decoded = img.decode().expect("Unable to decode");
+                let filter = choose_resize_filter(&process_params.resfilter);
+                //println!("{:?}",filter);
                 let resized = decoded.resize(
                     process_params.resx,
                     process_params.resy,
-                    image::imageops::FilterType::Nearest
+                    filter
                 );
                 
                 let mut bytes: Vec<u8> = Vec::new();
@@ -111,4 +114,16 @@ async fn handler(
         }
     }
     
+}
+
+fn choose_resize_filter(filter: &str)->image::imageops::FilterType{
+     //For now we choose the Nearest resize filter implicitly.
+    match filter{
+        "nearest" => return image::imageops::FilterType::Nearest,
+        "triangle" => return image::imageops::FilterType::Triangle,
+        "catmullrom"=> return image::imageops::FilterType::CatmullRom,
+        "gaussian"=> return  image::imageops::FilterType::Gaussian,
+        "lanczos" => return image::imageops::FilterType::Lanczos3,
+        _ => return image::imageops::FilterType::Nearest
+    }
 }
