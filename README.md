@@ -3,10 +3,15 @@
 > The Processing algorithms are far from optimal and will undergo massive Improvements. <br>
 > Star the repository for progress updates.
 
+# Nano Image Server
 ![Rust-Linux Worklflow](https://github.com/mahinkumar/Nano_image_server/actions/workflows/Rust_Linux.yml/badge.svg)
 ![Rust-Windows Worklflow](https://github.com/mahinkumar/Nano_image_server/actions/workflows/Rust_Windows.yml/badge.svg)
 
-# Nano Image Server
+
+<hr>
+
+![image](https://github.com/user-attachments/assets/c43b43bf-b42e-4115-b225-da9a76f26894)
+<hr>
 Nano Image Server is a tiny, blazingly fast service to serve images with support for image operation on fly.
 
 ## Features
@@ -15,13 +20,8 @@ Nano Image Server is a tiny, blazingly fast service to serve images with support
 3. Support for GPU Acceleration
 4. Simple Image browsing utility
 5. Caching and Instant Retrieval
+6. Support for Linux and Windows
 
-## Working
-
-The following request returns a processed image of resolution 1920x1080px with black and white filter
-```
-https://<imageserver>.com/image/Nature.jpg?resx=1920&resy=1080&filter=bw
-```
 
 ## Usage
 
@@ -34,33 +34,24 @@ start nano_image_server.exe #Windows
 3. Access the server from port 8000 in localhost.
 4. To get image go to `/image/<imagename>.<format>`
 5. If needed resizing use queries resx and resy `/image/Nature.jpg?resx=1920&resy=1080`
-6. If specified size is 0 or left unspecified they display original size of the image
+6. When resizing use query resfilter `/image/Nature.jpg?resx=1920&resy=1080&resfilter=lanczos`
+7. If specified size is 0 or left unspecified they display original size of the image
+8. If resfilter query is unspecified, nearest is chosen by default
+9. Choose from several resize algorithms for resizing using the resfilter query.<br>
+    Availible resize algorithms are,
+    - Nearest
+    - Triangle
+    - Catmullrom
+    - Gaussian
+    - Lanczos
 
 
-## Benchmarks 
-
-### Nano_image_server **v0.1.0-alpha** With ApacheBench on 24 Threads (Balanced Power Mode on a Laptop)
+## Version Benchmarks 
 ```markdown
-# Command 
-ab -n 1000 -c 24 -k http://localhost:8000/image/in.jpg?resx=1080&resy=1920
-
-# Benchmark ----
-Server Hostname:        localhost
-Server Port:            8000
-
-Document Path:          /image/in.jpg?resx=1080
-Document Length:        12079492 bytes
-
-Concurrency Level:      24
-Time taken for tests:   78.532 seconds
-Complete requests:      1000
-Failed requests:        0
-Keep-Alive requests:    1000
-Total transferred:      12079624000 bytes
-HTML transferred:       12079492000 bytes
-Requests per second:    12.73 [#/sec] (mean)
-Time per request:       1884.773 [ms] (mean)
-Time per request:       78.532 [ms] (mean, across all concurrent requests)
-Transfer rate:          150212.34 [Kbytes/sec] received
+# command
+ab -n 1000 -c 24 -k 'http://localhost:8000/image/in.jpg?resx=1080&resy=1920' #With Processing
+ab -n 1000 -c 24 -k 'http://localhost:8000/image/in.jpg' #Without Processing
 ```
+### Nano_image_server With ApacheBench on 24 Threads (Balanced Power Mode on a Laptop)
+![image](https://github.com/user-attachments/assets/a15ca744-08d2-4d65-8f08-ab62556ab752)
 
