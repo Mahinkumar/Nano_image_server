@@ -58,58 +58,43 @@ async fn handler(
     let input_path = format!("./images/{}", image);
     let no_resize = process_params.resx == 0 || process_params.resy == 0;
 
-    if no_resize {
-        match tokio::fs::read(&input_path).await {
-            Ok(bytes) => {
-                //let elapsed = now.elapsed();
-                //println!("Elapsed direct Read: {:.2?}", elapsed);
+    match tokio::fs::read(&input_path).await {
+        Ok(bytes) => {
+            if no_resize {
                 return (
                     [(header::CONTENT_TYPE, "image/jpeg")],
                     axum::body::Body::from(bytes),
                 );
             }
-            Err(_) => {
-                //let elapsed = now.elapsed();
-                //println!("Elapsed Error Read: {:.2?}", elapsed);
-                return (
-                    [(header::CONTENT_TYPE, "message")],
-                    axum::body::Body::from("File I/O Error"),
-                );
-            }
+            let decoded = ImageReader::new(Cursor::new(bytes))
+                .with_guessed_format()
+                .expect("Unable to find format")
+                .decode()
+                .expect("Unable to decode");
+            let filter = choose_resize_filter(&process_params.resfilter);
+            //println!("{:?}",filter);
+            let resized = decoded.resize(process_params.resx, process_params.resy, filter);
+
+            let mut bytes: Vec<u8> = Vec::new();
+            resized
+                .write_to(&mut Cursor::new(&mut bytes), image::ImageFormat::Jpeg)
+                .expect("Unable to write");
+
+            //let elapsed = now.elapsed();
+            //println!("Elapsed Processed Read: {:.2?}", elapsed);
+
+            return (
+                [(header::CONTENT_TYPE, "image/jpeg")],
+                axum::body::Body::from(bytes),
+            );
         }
-    } else {
-        match tokio::fs::read(&input_path).await {
-            Ok(bytes) => {
-                let decoded = ImageReader::new(Cursor::new(bytes))
-                    .with_guessed_format()
-                    .expect("Unable to find format")
-                    .decode()
-                    .expect("Unable to decode");
-                let filter = choose_resize_filter(&process_params.resfilter);
-                //println!("{:?}",filter);
-                let resized = decoded.resize(process_params.resx, process_params.resy, filter);
-
-                let mut bytes: Vec<u8> = Vec::new();
-                resized
-                    .write_to(&mut Cursor::new(&mut bytes), image::ImageFormat::Jpeg)
-                    .expect("Unable to write");
-
-                //let elapsed = now.elapsed();
-                //println!("Elapsed Processed Read: {:.2?}", elapsed);
-
-                return (
-                    [(header::CONTENT_TYPE, "image/jpeg")],
-                    axum::body::Body::from(bytes),
-                );
-            }
-            Err(_) => {
-                //let elapsed = now.elapsed();
-                //println!("Elapsed Error Read: {:.2?}", elapsed);
-                return (
-                    [(header::CONTENT_TYPE, "message")],
-                    axum::body::Body::from("File I/O Error"),
-                );
-            }
+        Err(_) => {
+            //let elapsed = now.elapsed();
+            //println!("Elapsed Error Read: {:.2?}", elapsed);
+            return (
+                [(header::CONTENT_TYPE, "message")],
+                axum::body::Body::from("File I/O Error"),
+            );
         }
     }
 }
