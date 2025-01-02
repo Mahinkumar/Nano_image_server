@@ -31,7 +31,7 @@ const PORT_HOST: u16 = 8000;
 
 #[tokio::main]
 async fn main() {
-    let app = Router::new().route("/image/:image", get(handler));
+    let app = Router::new().route("/image/{image}", get(handler));
 
     println!("Nano Image Server Running...");
     println!("Serving on http://localhost:{PORT_HOST}/image");
