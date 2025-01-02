@@ -9,4 +9,5 @@ axum = "0.8.1"
 tower-http = { version = "0.6.2", features = ["fs"]}
 serde = { version = "1.0.216", features = ["derive"] }
 image = "0.25.5"
+rustls = "0.23.20"
 
