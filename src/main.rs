@@ -6,20 +6,22 @@ use axum::http::header;
 use axum::response::IntoResponse;
 use axum::routing::get;
 use axum::{Router, ServiceExt};
+
 use resize::resizer;
 use std::net::SocketAddr;
-use proc::blur;
+use proc::{blur, grayscale};
 
 use serde::Deserialize;
 //use std::time::Instant; // For timing functions
 
 #[derive(Deserialize, Debug)]
 #[serde(default = "default_param")]
-pub struct ProcessParameters {
-    pub resx: u32,
-    pub resy: u32,
-    pub resfilter: String,
-    pub blur: f32,
+struct ProcessParameters {
+    resx: u32,
+    resy: u32,
+    resfilter: String,
+    filter: String,
+    f_param: f32,
 }
 
 fn default_param() -> ProcessParameters {
@@ -27,7 +29,8 @@ fn default_param() -> ProcessParameters {
         resx: 0,
         resy: 0,
         resfilter: "Optimal".to_string(),
-        blur: 0.0
+        filter: "None".to_string(),
+        f_param: 0.0,
     }
 }
 
@@ -62,16 +65,20 @@ async fn handler(
 
     let input_path = format!("./images/{}", image);
     let do_resize: bool = process_params.resx != 0 || process_params.resy != 0;
-    let do_proc: bool = process_params.blur != 0.0;
+    let do_proc: bool = process_params.filter != "None".to_string();
 
 
     match tokio::fs::read(&input_path).await {
         Ok(mut bytes) => {
             if do_resize {
-                bytes = resizer(bytes, &process_params);
+                bytes = resizer(bytes, process_params.resx, process_params.resy, &process_params.resfilter);
             } 
             if do_proc {
-                bytes = blur(bytes, &process_params);
+                match process_params.filter.to_lowercase().as_str(){
+                    "blur" => { bytes =  blur(bytes, process_params.f_param)},
+                    "bw" => {bytes = grayscale(bytes)}
+                    _ => {}
+                }
                 //let elapsed = now.elapsed();
                 //println!("Elapsed Processed Read: {:.2?}", elapsed);
 

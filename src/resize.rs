@@ -1,20 +1,15 @@
 use std::io::Cursor;
-
 use image::ImageReader;
 
-use crate::ProcessParameters;
-
-
-
-pub fn resizer(image_bytes: Vec<u8>,process_params: &ProcessParameters) -> Vec<u8>{
+pub fn resizer(image_bytes: Vec<u8>,x: u32 ,y: u32 ,filter: &str) -> Vec<u8>{
     let decoded = ImageReader::new(Cursor::new(image_bytes))
                 .with_guessed_format()
                 .expect("Unable to find format")
                 .decode()
                 .expect("Unable to decode");
-    let filter = choose_resize_filter(&process_params.resfilter);
+    let final_filter = choose_resize_filter(filter);
     //println!("{:?}",filter);
-    let resized = decoded.resize(process_params.resx, process_params.resy, filter);
+    let resized = decoded.resize(x, y, final_filter);
 
     let mut bytes: Vec<u8> = Vec::new();
     resized
