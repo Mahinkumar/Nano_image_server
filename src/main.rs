@@ -9,7 +9,7 @@ use axum::{Router, ServiceExt};
 
 use resize::resizer;
 use std::net::SocketAddr;
-use proc::{blur, grayscale};
+use proc::{blur, brighten, grayscale};
 
 use serde::Deserialize;
 //use std::time::Instant; // For timing functions
@@ -76,7 +76,8 @@ async fn handler(
             if do_proc {
                 match process_params.filter.to_lowercase().as_str(){
                     "blur" => { bytes =  blur(bytes, process_params.f_param)},
-                    "bw" => {bytes = grayscale(bytes)}
+                    "bw" => {bytes = grayscale(bytes)},
+                    "brighten" => {bytes = brighten(bytes, process_params.f_param)},
                     _ => {}
                 }
                 //let elapsed = now.elapsed();
