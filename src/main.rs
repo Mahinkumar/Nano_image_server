@@ -1,5 +1,5 @@
-pub mod resize;
-pub mod proc;
+pub mod transform;
+pub mod filter;
 
 use axum::extract::{Path, Query, Request};
 use axum::http::header;
@@ -7,9 +7,9 @@ use axum::response::IntoResponse;
 use axum::routing::get;
 use axum::{Router, ServiceExt};
 
-use resize::resizer;
+use transform::resizer;
 use std::net::SocketAddr;
-use proc::{blur, brighten, grayscale};
+use filter::{blur, brighten, contrast, grayscale};
 
 use serde::Deserialize;
 //use std::time::Instant; // For timing functions
@@ -22,6 +22,8 @@ struct ProcessParameters {
     resfilter: String,
     filter: String,
     f_param: f32,
+    transform: String,
+    t_param: i8,
 }
 
 fn default_param() -> ProcessParameters {
@@ -31,6 +33,8 @@ fn default_param() -> ProcessParameters {
         resfilter: "Optimal".to_string(),
         filter: "None".to_string(),
         f_param: 0.0,
+        transform: "None".to_string(),
+        t_param: 0,
     }
 }
 
@@ -65,7 +69,8 @@ async fn handler(
 
     let input_path = format!("./images/{}", image);
     let do_resize: bool = process_params.resx != 0 || process_params.resy != 0;
-    let do_proc: bool = process_params.filter != "None".to_string();
+    let do_filter: bool = process_params.filter != "None".to_string();
+    let do_transform: bool = process_params.transform != "None".to_string();
 
 
     match tokio::fs::read(&input_path).await {
@@ -73,15 +78,21 @@ async fn handler(
             if do_resize {
                 bytes = resizer(bytes, process_params.resx, process_params.resy, &process_params.resfilter);
             } 
-            if do_proc {
+            if do_filter {
                 match process_params.filter.to_lowercase().as_str(){
                     "blur" => { bytes =  blur(bytes, process_params.f_param)},
-                    "bw" => {bytes = grayscale(bytes)},
-                    "brighten" => {bytes = brighten(bytes, process_params.f_param)},
+                    "bw" => { bytes = grayscale(bytes)},
+                    "brighten" => { bytes = brighten(bytes, process_params.f_param)},
+                    "contrast" => { bytes = contrast(bytes, process_params.f_param)}
                     _ => {}
                 }
-                //let elapsed = now.elapsed();
-                //println!("Elapsed Processed Read: {:.2?}", elapsed);
+
+            }
+            if do_transform {
+                match process_params.transform.to_lowercase().as_str(){
+                    //For Transforms
+                    _ => {}
+                }
 
             }
             return (
