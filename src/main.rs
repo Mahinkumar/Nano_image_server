@@ -1,5 +1,6 @@
 pub mod transform;
 pub mod filter;
+pub mod utils;
 
 use axum::extract::{Path, Query, Request};
 use axum::http::header;
@@ -23,7 +24,7 @@ struct ProcessParameters {
     filter: String,
     f_param: f32,
     transform: String,
-    t_param: i8,
+    t_param: i32,
 }
 
 fn default_param() -> ProcessParameters {
