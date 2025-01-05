@@ -33,17 +33,37 @@ start nano_image_server.exe #Windows
 ```
 3. Access the server from port 8000 in localhost.
 4. To get image go to `/image/<imagename>.<format>`
-5. If needed resizing use queries resx and resy `/image/Nature.jpg?resx=1920&resy=1080`
-6. When resizing use query resfilter `/image/Nature.jpg?resx=1920&resy=1080&resfilter=lanczos`
-7. If specified size is 0 or left unspecified they display original size of the image
-8. If resfilter query is unspecified, nearest is chosen by default
-9. Choose from several resize algorithms for resizing using the resfilter query.<br>
+
+<hr>
+
+### Resizing
+1. If needed resizing use queries resx and resy `/image/Nature.jpg?resx=1920&resy=1080`
+2. When resizing use query resfilter `/image/Nature.jpg?resx=1920&resy=1080&resfilter=lanczos`
+3. If specified size is 0 or left unspecified they display original size of the image
+4. If resfilter query is unspecified, nearest is chosen by default
+5. Choose from several resize algorithms for resizing using the resfilter query.<br>
     Availible resize algorithms are,
     - Nearest
     - Triangle
     - Catmullrom
     - Gaussian
     - Lanczos
+
+### Filters
+The availible filters are 
+1. Blur
+2. Grayscale 
+3. Brighten
+4. Contrast
+
+### Transforms
+The availible transforms are
+1. Flip horizontal
+2. Flip Vertical
+3. Rotate (90deg, 180deg, 270deg)
+4. Hue rotate
+
+<hr>
 
 
 ## Version Benchmarks 
