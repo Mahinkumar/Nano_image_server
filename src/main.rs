@@ -8,7 +8,7 @@ use axum::response::IntoResponse;
 use axum::routing::get;
 use axum::{Router, ServiceExt};
 
-use transform::resizer;
+use transform::{flip_horizontal, flip_vertical, hue_rotate, resizer, rotate};
 use std::net::SocketAddr;
 use filter::{blur, brighten, contrast, grayscale};
 
@@ -91,7 +91,10 @@ async fn handler(
             }
             if do_transform {
                 match process_params.transform.to_lowercase().as_str(){
-                    //For Transforms
+                    "fliph" => {bytes = flip_horizontal(bytes)},
+                    "flipv" => {bytes = flip_vertical(bytes)},
+                    "rotate" => {bytes = rotate(bytes, process_params.t_param)},
+                    "hue_rotate" => {bytes = hue_rotate(bytes, process_params.t_param)}
                     _ => {}
                 }
 

@@ -72,8 +72,6 @@ pub fn hue_rotate(image_bytes: Vec<u8>,transform_param: i32) -> Vec<u8>{
 }
 
 
-
-
 fn choose_resize_filter(filter: &str) -> image::imageops::FilterType {
     //For now we choose the Nearest resize filter implicitly.
     match filter {
