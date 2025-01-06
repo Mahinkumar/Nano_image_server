@@ -1,8 +1,5 @@
 <script lang="ts">
-    import Console from "./lib/Console.svelte";
-    document.body.style.backgroundColor = '#292728';
+  import { Button } from 'svelte-tweakpane-ui';
 </script>
 
-<body class="w-screen h-screen bg-black">
-  <Console/>
-</body>
+<Button label="Web console" on:click={() => alert('Web console is working')} />
