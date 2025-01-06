@@ -12,16 +12,19 @@
 
 ![image](https://github.com/user-attachments/assets/c43b43bf-b42e-4115-b225-da9a76f26894)
 <hr>
+
 Nano Image Server is a tiny, blazingly fast service to serve images with support for image operation on fly.
 
-## Features
+## Available Features
 1. Low latency Image delivery
 2. Image operation on fly via url queries
-3. Support for GPU Acceleration
-4. Simple Image browsing utility
-5. Caching and Instant Retrieval
-6. Support for Linux and Windows
+3. Caching and Instant Retrieval
+4. Support for Linux and Windows
 
+## Planned features 
+1. Support for GPU Acceleration
+2. Full server management interface
+3. Advanced image browsing and management interface 
 
 ## Usage
 
