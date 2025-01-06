@@ -1,49 +1,34 @@
 
-use std::io::Cursor;
-use crate::utils::decoder;
+
+use image::ImageFormat;
+use crate::utils::{decoder, encoder};
 
 
-pub fn blur(image_bytes: Vec<u8>,process_param: f32) -> Vec<u8>{
+pub fn blur(image_bytes: Vec<u8>,img_format: ImageFormat,process_param: f32) -> Vec<u8>{
     let decoded = decoder(image_bytes);
     let blurred = decoded.fast_blur(process_param);
 
-    let mut bytes: Vec<u8> = Vec::new();
-    blurred
-        .write_to(&mut Cursor::new(&mut bytes), image::ImageFormat::Jpeg)
-        .expect("Unable to write");
-    bytes
+    encoder(blurred, img_format)
 }
 
-pub fn grayscale(image_bytes: Vec<u8>) -> Vec<u8>{
+pub fn grayscale(image_bytes: Vec<u8>,img_format: ImageFormat) -> Vec<u8>{
     let decoded = decoder(image_bytes);
     let grayscaled = decoded.grayscale();
 
-    let mut bytes: Vec<u8> = Vec::new();
-    grayscaled
-        .write_to(&mut Cursor::new(&mut bytes), image::ImageFormat::Jpeg)
-        .expect("Unable to write");
-    bytes
+    encoder(grayscaled, img_format)
 }
 
-pub fn brighten(image_bytes: Vec<u8>,process_param: f32) -> Vec<u8>{
+pub fn brighten(image_bytes: Vec<u8>,img_format: ImageFormat,process_param: f32) -> Vec<u8>{
     let decoded = decoder(image_bytes);
     let brightened = decoded.brighten(((process_param*51.0)) as i32);
 
-    let mut bytes: Vec<u8> = Vec::new();
-    brightened
-        .write_to(&mut Cursor::new(&mut bytes), image::ImageFormat::Jpeg)
-        .expect("Unable to write");
-    bytes
+    encoder(brightened, img_format)
 }
 
-pub fn contrast(image_bytes: Vec<u8>,process_param: f32) -> Vec<u8>{
+pub fn contrast(image_bytes: Vec<u8>,img_format: ImageFormat,process_param: f32) -> Vec<u8>{
     let decoded = decoder(image_bytes);
     let contrasted = decoded.adjust_contrast(process_param);
 
-    let mut bytes: Vec<u8> = Vec::new();
-    contrasted
-        .write_to(&mut Cursor::new(&mut bytes), image::ImageFormat::Jpeg)
-        .expect("Unable to write");
-    bytes
+    encoder(contrasted, img_format)
 }
 

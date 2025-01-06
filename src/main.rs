@@ -8,6 +8,7 @@ use axum::response::IntoResponse;
 use axum::routing::get;
 use axum::{Router, ServiceExt};
 
+use image::ImageFormat;
 use transform::{flip_horizontal, flip_vertical, hue_rotate, resizer, rotate};
 use std::net::SocketAddr;
 use filter::{blur, brighten, contrast, grayscale};
@@ -67,34 +68,37 @@ async fn handler(
     Query(process_params): Query<ProcessParameters>,
 ) -> impl IntoResponse {
     //let now = Instant::now();
+    let parsed_path:Vec<&str> = image.split('.').collect();
+    let img_format = parsed_path[1];
 
     let input_path = format!("./images/{}", image);
     let do_resize: bool = process_params.resx != 0 || process_params.resy != 0;
     let do_filter: bool = process_params.filter != "None".to_string();
     let do_transform: bool = process_params.transform != "None".to_string();
 
+    let img_format = ImageFormat::from_extension(img_format).expect("Unable to parse Image format");
 
     match tokio::fs::read(&input_path).await {
         Ok(mut bytes) => {
             if do_resize {
-                bytes = resizer(bytes, process_params.resx, process_params.resy, &process_params.resfilter);
+                bytes = resizer(bytes,img_format, process_params.resx, process_params.resy, &process_params.resfilter);
             } 
             if do_filter {
                 match process_params.filter.to_lowercase().as_str(){
-                    "blur" => { bytes =  blur(bytes, process_params.f_param)},
-                    "bw" => { bytes = grayscale(bytes)},
-                    "brighten" => { bytes = brighten(bytes, process_params.f_param)},
-                    "contrast" => { bytes = contrast(bytes, process_params.f_param)}
+                    "blur" => { bytes =  blur(bytes,img_format, process_params.f_param)},
+                    "bw" => { bytes = grayscale(bytes,img_format)},
+                    "brighten" => { bytes = brighten(bytes,img_format, process_params.f_param)},
+                    "contrast" => { bytes = contrast(bytes,img_format, process_params.f_param)}
                     _ => {}
                 }
 
             }
             if do_transform {
                 match process_params.transform.to_lowercase().as_str(){
-                    "fliph" => {bytes = flip_horizontal(bytes)},
-                    "flipv" => {bytes = flip_vertical(bytes)},
-                    "rotate" => {bytes = rotate(bytes, process_params.t_param)},
-                    "hue_rotate" => {bytes = hue_rotate(bytes, process_params.t_param)}
+                    "fliph" => {bytes = flip_horizontal(bytes,img_format)},
+                    "flipv" => {bytes = flip_vertical(bytes,img_format)},
+                    "rotate" => {bytes = rotate(bytes,img_format, process_params.t_param)},
+                    "hue_rotate" => {bytes = hue_rotate(bytes,img_format, process_params.t_param)}
                     _ => {}
                 }
 
@@ -104,12 +108,11 @@ async fn handler(
                 axum::body::Body::from(bytes),
             );
         }
-        Err(_) => {
-            //let elapsed = now.elapsed();
-            //println!("Elapsed Error Read: {:.2?}", elapsed);
+        Err(err) => {
+            let message = format!("{err} Error");
             return (
                 [(header::CONTENT_TYPE, "message")],
-                axum::body::Body::from("File I/O Error"),
+                axum::body::Body::from(message),
             );
         }
     }

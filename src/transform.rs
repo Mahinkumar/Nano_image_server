@@ -1,46 +1,32 @@
-use std::io::Cursor;
-use image::DynamicImage;
+use image::{DynamicImage, ImageFormat};
 
-use crate::utils::decoder;
+use crate::utils::{decoder, encoder};
 
-pub fn resizer(image_bytes: Vec<u8>,x: u32 ,y: u32 ,filter: &str) -> Vec<u8>{
+pub fn resizer(image_bytes: Vec<u8>,img_format: ImageFormat,x: u32 ,y: u32 ,filter: &str) -> Vec<u8>{
     let decoded = decoder(image_bytes);
     let final_filter = choose_resize_filter(filter);
 
     let resized = decoded.resize(x, y, final_filter);
 
-    let mut bytes: Vec<u8> = Vec::new();
-    resized
-        .write_to(&mut Cursor::new(&mut bytes), image::ImageFormat::Jpeg)
-        .expect("Unable to write");
-
-    bytes
+    encoder(resized, img_format)
 }
 
 
-pub fn flip_horizontal(image_bytes: Vec<u8>) -> Vec<u8>{
+pub fn flip_horizontal(image_bytes: Vec<u8>,img_format: ImageFormat) -> Vec<u8>{
     let decoded = decoder(image_bytes);
     let flipped_h = decoded.fliph();
 
-    let mut bytes: Vec<u8> = Vec::new();
-    flipped_h
-        .write_to(&mut Cursor::new(&mut bytes), image::ImageFormat::Jpeg)
-        .expect("Unable to write");
-    bytes
+    encoder(flipped_h, img_format)
 }
 
-pub fn flip_vertical(image_bytes: Vec<u8>) -> Vec<u8>{
+pub fn flip_vertical(image_bytes: Vec<u8>,img_format: ImageFormat) -> Vec<u8>{
     let decoded = decoder(image_bytes);
     let flipped_v = decoded.flipv();
 
-    let mut bytes: Vec<u8> = Vec::new();
-    flipped_v
-        .write_to(&mut Cursor::new(&mut bytes), image::ImageFormat::Jpeg)
-        .expect("Unable to write");
-    bytes
+    encoder(flipped_v, img_format)
 }
 
-pub fn rotate(image_bytes: Vec<u8>,transform_param: i32) -> Vec<u8>{
+pub fn rotate(image_bytes: Vec<u8>,img_format: ImageFormat,transform_param: i32) -> Vec<u8>{
     let decoded = decoder(image_bytes);
     let rotated: DynamicImage;
     if transform_param == 1 {
@@ -53,22 +39,14 @@ pub fn rotate(image_bytes: Vec<u8>,transform_param: i32) -> Vec<u8>{
         rotated = decoded
     }
     
-    let mut bytes: Vec<u8> = Vec::new();
-    rotated
-        .write_to(&mut Cursor::new(&mut bytes), image::ImageFormat::Jpeg)
-        .expect("Unable to write");
-    bytes
+    encoder(rotated, img_format)
 }
 
-pub fn hue_rotate(image_bytes: Vec<u8>,transform_param: i32) -> Vec<u8>{
+pub fn hue_rotate(image_bytes: Vec<u8>,img_format: ImageFormat,transform_param: i32) -> Vec<u8>{
     let decoded = decoder(image_bytes);
     let hue_rotated = decoded.huerotate(transform_param);
 
-    let mut bytes: Vec<u8> = Vec::new();
-    hue_rotated
-        .write_to(&mut Cursor::new(&mut bytes), image::ImageFormat::Jpeg)
-        .expect("Unable to write");
-    bytes
+    encoder(hue_rotated, img_format)
 }
 
 
