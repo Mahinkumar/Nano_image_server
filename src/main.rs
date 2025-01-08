@@ -15,6 +15,16 @@ use filter::{blur, brighten, contrast, grayscale};
 
 use serde::Deserialize;
 //use std::time::Instant; // For timing functions
+use clap::Parser;
+
+/// Simple CLI application with console flag
+#[derive(Parser, Debug)]
+#[command(author, version, about, long_about = None)]
+struct Args {
+    /// Toggle console mode
+    #[arg(long, default_value_t = false, short)]
+    console: bool,
+}
 
 #[derive(Deserialize, Debug)]
 #[serde(default = "default_param")]
@@ -45,10 +55,21 @@ const PORT_HOST: u16 = 8000;
 
 #[tokio::main]
 async fn main() {
+    let args = Args::parse();
+
+    
+
     let app = Router::new().route("/image/{image}", get(handler));
 
-    println!("Nano Image Server Running...");
-    println!("Serving on http://localhost:{PORT_HOST}/image");
+    println!("Nano Image Server Starting...");
+    if args.console {
+        println!("[LOG] Console is enabled");
+    }
+    println!("Serving images on http://localhost:{PORT_HOST}/image");
+    if args.console {
+        println!("Serving console on http://localhost:<placeholder>/");
+    }
+    
 
     tokio::spawn(async move { serve(app, PORT_HOST).await })
         .await
