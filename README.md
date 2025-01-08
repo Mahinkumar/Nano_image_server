@@ -66,6 +66,25 @@ The availible transforms are
 3. Rotate (90deg, 180deg, 270deg)
 4. Hue rotate
 
+### Supported Image formats
+The following formats are supported via encoders and decoders from the Image-rs Library
+
+| Format   | Decoding                                  | Encoding                                |
+| -------- | ----------------------------------------- | --------------------------------------- |
+| AVIF     | Yes \*                                    | Yes (lossy only)                        |
+| BMP      | Yes                                       | Yes                                     |
+| Farbfeld | Yes                                       | Yes                                     |
+| GIF      | Yes                                       | Yes                                     |
+| HDR      | Yes                                       | Yes                                     |
+| ICO      | Yes                                       | Yes                                     |
+| JPEG     | Yes                                       | Yes                                     |
+| EXR      | Yes                                       | Yes                                     |
+| PNG      | Yes                                       | Yes                                     |
+| PNM      | Yes                                       | Yes                                     |
+| QOI      | Yes                                       | Yes                                     |
+| TGA      | Yes                                       | Yes                                     |
+| TIFF     | Yes                                       | Yes                                     |
+| WebP     | Yes                                       | Yes (lossless only)                     |
 <hr>
 
 
