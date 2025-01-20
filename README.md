@@ -13,6 +13,8 @@
 ![image](https://github.com/user-attachments/assets/c43b43bf-b42e-4115-b225-da9a76f26894)
 <hr>
 
+|<a href="https://docs.mahinkumar.com/nanoimageserver/"> Docs </a>|<a href="https://docs.mahinkumar.com/nanoimageserver/usage.html"> Usage </a> | <a href="https://docs.mahinkumar.com/nanoimageserver/references.html"> References </a> |
+
 Nano Image Server is a tiny, blazingly fast service to serve images with support for image operation on fly.
 
 ## Available Features
@@ -20,11 +22,6 @@ Nano Image Server is a tiny, blazingly fast service to serve images with support
 2. Image operation on fly via url queries
 3. Caching and Instant Retrieval
 4. Support for Linux and Windows
-
-## Planned features 
-1. Support for GPU Acceleration
-2. Full server management interface
-3. Advanced image browsing and management interface 
 
 ## Usage
 
@@ -51,6 +48,8 @@ start nano_image_server.exe #Windows
     - Catmullrom
     - Gaussian
     - Lanczos
+    - Optimal
+6. Optimal choose the best algorithm possible based on the resize request. 
 
 ### Filters
 The availible filters are 
@@ -65,6 +64,11 @@ The availible transforms are
 2. Flip Vertical
 3. Rotate (90deg, 180deg, 270deg)
 4. Hue rotate
+
+### Processing
+The availible proccessing are
+1. Invert
+2. Unsharpen
 
 ### Supported Image formats
 The following formats are supported via encoders and decoders from the Image-rs Library
@@ -86,14 +90,3 @@ The following formats are supported via encoders and decoders from the Image-rs 
 | TIFF     | Yes                                       | Yes                                     |
 | WebP     | Yes                                       | Yes (lossless only)                     |
 <hr>
-
-
-## Version Benchmarks 
-```markdown
-# command
-ab -n 1000 -c 24 -k 'http://localhost:8000/image/in.jpg?resx=1080&resy=1920' #With Processing
-ab -n 1000 -c 24 -k 'http://localhost:8000/image/in.jpg' #Without Processing
-```
-### Nano_image_server With ApacheBench on 24 Threads (Balanced Power Mode on a Laptop)
-![image](https://github.com/user-attachments/assets/a15ca744-08d2-4d65-8f08-ab62556ab752)
-
