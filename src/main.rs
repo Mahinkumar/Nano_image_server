@@ -36,6 +36,9 @@ struct ProcessParameters {
     f_param: f32,
     transform: String,
     t_param: i32,
+    process: String,
+    p_param_1: f32,
+    p_param_2: f32
 }
 
 fn default_param() -> ProcessParameters {
@@ -47,6 +50,9 @@ fn default_param() -> ProcessParameters {
         f_param: 0.0,
         transform: "None".to_string(),
         t_param: 0,
+        process: "None".to_string(),
+        p_param_1: 0.0,
+        p_param_2: 0.0,
     }
 }
 
@@ -56,9 +62,6 @@ const PORT_HOST: u16 = 8000;
 #[tokio::main]
 async fn main() {
     let args = Args::parse();
-
-    
-
     let app = Router::new().route("/image/{image}", get(handler));
 
     println!("Nano Image Server Starting...");
@@ -96,6 +99,7 @@ async fn handler(
     let do_resize: bool = process_params.resx != 0 || process_params.resy != 0;
     let do_filter: bool = process_params.filter != "None".to_string();
     let do_transform: bool = process_params.transform != "None".to_string();
+    let do_process: bool = process_params.process != "None".to_string();
 
     let img_format = ImageFormat::from_extension(img_format).expect("Unable to parse Image format");
 
@@ -123,6 +127,11 @@ async fn handler(
                     _ => {}
                 }
 
+            }
+            if do_process{
+                match process_params.process.to_lowercase().as_str(){
+                    _ => {}
+                }
             }
             return (
                 [(header::CONTENT_TYPE, "image/jpeg")],
