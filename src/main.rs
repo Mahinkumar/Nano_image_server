@@ -140,8 +140,8 @@ async fn handler(
                         bytes = unsharpen(
                             bytes,
                             img_format,
-                            process_params.p_param_1,
-                            process_params.p_param_2,
+                            process_params.p1,
+                            process_params.p2,
                         )
                     }
                     _ => {}
