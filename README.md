@@ -13,9 +13,11 @@
 ![image](https://github.com/user-attachments/assets/c43b43bf-b42e-4115-b225-da9a76f26894)
 <hr>
 
-|<a href="https://docs.mahinkumar.com/nanoimageserver/"> Docs </a>|<a href="https://docs.mahinkumar.com/nanoimageserver/usage.html"> Usage </a> | <a href="https://docs.mahinkumar.com/nanoimageserver/references.html"> References </a> |
+|<a href="https://docs.mahinkumar.com/nanoimageserver/"> Docs </a>|<a href="https://docs.mahinkumar.com/nanoimageserver/"> Usage </a> | <a href="https://docs.mahinkumar.com/nanoimageserver/"> References </a> |
 
 Nano Image Server is a tiny, blazingly fast service to serve images with support for image operation on fly.
+
+It is truly asynchronous, Memory safe and thread safe. Built upon axum and tokio runtime. The image processing, encoding and decoding are done by the image crate. GPU support and caching are planned before the stable release.
 
 ## Available Features
 1. Low latency Image delivery
