@@ -1,17 +1,19 @@
-pub mod transform;
 pub mod filter;
+pub mod process;
+pub mod transform;
 pub mod utils;
 
-use axum::extract::{Path, Query, Request};
+use axum::extract::{Path, Query, Request}; 
 use axum::http::header;
 use axum::response::IntoResponse;
 use axum::routing::get;
 use axum::{Router, ServiceExt};
 
-use image::ImageFormat;
-use transform::{flip_horizontal, flip_vertical, hue_rotate, resizer, rotate};
-use std::net::SocketAddr;
 use filter::{blur, brighten, contrast, grayscale};
+use image::ImageFormat;
+use process::{invert, unsharpen};
+use std::net::SocketAddr;
+use transform::{flip_horizontal, flip_vertical, hue_rotate, resizer, rotate};
 
 use serde::Deserialize;
 //use std::time::Instant; // For timing functions
@@ -38,7 +40,7 @@ struct ProcessParameters {
     t_param: i32,
     process: String,
     p_param_1: f32,
-    p_param_2: f32
+    p_param_2: f32,
 }
 
 fn default_param() -> ProcessParameters {
@@ -72,7 +74,6 @@ async fn main() {
     if args.console {
         println!("Serving console on http://localhost:<placeholder>/");
     }
-    
 
     tokio::spawn(async move { serve(app, PORT_HOST).await })
         .await
@@ -92,7 +93,7 @@ async fn handler(
     Query(process_params): Query<ProcessParameters>,
 ) -> impl IntoResponse {
     //let now = Instant::now();
-    let parsed_path:Vec<&str> = image.split('.').collect();
+    let parsed_path: Vec<&str> = image.split('.').collect();
     let img_format = parsed_path[1];
 
     let input_path = format!("./images/{}", image);
@@ -106,30 +107,43 @@ async fn handler(
     match tokio::fs::read(&input_path).await {
         Ok(mut bytes) => {
             if do_resize {
-                bytes = resizer(bytes,img_format, process_params.resx, process_params.resy, &process_params.resfilter);
-            } 
+                bytes = resizer(
+                    bytes,
+                    img_format,
+                    process_params.resx,
+                    process_params.resy,
+                    &process_params.resfilter,
+                );
+            }
             if do_filter {
-                match process_params.filter.to_lowercase().as_str(){
-                    "blur" => { bytes =  blur(bytes,img_format, process_params.f_param)},
-                    "bw" => { bytes = grayscale(bytes,img_format)},
-                    "brighten" => { bytes = brighten(bytes,img_format, process_params.f_param)},
-                    "contrast" => { bytes = contrast(bytes,img_format, process_params.f_param)}
+                match process_params.filter.to_lowercase().as_str() {
+                    "blur" => bytes = blur(bytes, img_format, process_params.f_param),
+                    "bw" => bytes = grayscale(bytes, img_format),
+                    "brighten" => bytes = brighten(bytes, img_format, process_params.f_param),
+                    "contrast" => bytes = contrast(bytes, img_format, process_params.f_param),
                     _ => {}
                 }
-
             }
             if do_transform {
-                match process_params.transform.to_lowercase().as_str(){
-                    "fliph" => {bytes = flip_horizontal(bytes,img_format)},
-                    "flipv" => {bytes = flip_vertical(bytes,img_format)},
-                    "rotate" => {bytes = rotate(bytes,img_format, process_params.t_param)},
-                    "hue_rotate" => {bytes = hue_rotate(bytes,img_format, process_params.t_param)}
+                match process_params.transform.to_lowercase().as_str() {
+                    "fliph" => bytes = flip_horizontal(bytes, img_format),
+                    "flipv" => bytes = flip_vertical(bytes, img_format),
+                    "rotate" => bytes = rotate(bytes, img_format, process_params.t_param),
+                    "hue_rotate" => bytes = hue_rotate(bytes, img_format, process_params.t_param),
                     _ => {}
                 }
-
             }
-            if do_process{
-                match process_params.process.to_lowercase().as_str(){
+            if do_process {
+                match process_params.process.to_lowercase().as_str() {
+                    "invert" => bytes = invert(bytes, img_format),
+                    "unsharpen" => {
+                        bytes = unsharpen(
+                            bytes,
+                            img_format,
+                            process_params.p_param_1,
+                            process_params.p_param_2,
+                        )
+                    }
                     _ => {}
                 }
             }
