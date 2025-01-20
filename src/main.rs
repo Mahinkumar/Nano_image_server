@@ -24,8 +24,8 @@ use clap::Parser;
 #[command(author, version, about, long_about = None)]
 struct Args {
     /// Toggle console mode
-    #[arg(long, default_value_t = false, short)]
-    console: bool,
+    #[arg(long, default_value_t = 8000, short)]
+    port: u16,
 }
 
 #[derive(Deserialize, Debug)]
@@ -59,7 +59,7 @@ fn default_param() -> ProcessParameters {
 }
 
 const ADDR: [u8; 4] = [127, 0, 0, 1];
-const PORT_HOST: u16 = 8000;
+
 
 #[tokio::main]
 async fn main() {
@@ -67,15 +67,9 @@ async fn main() {
     let app = Router::new().route("/image/{image}", get(handler));
 
     println!("Nano Image Server Starting...");
-    if args.console {
-        println!("[LOG] Console is enabled");
-    }
-    println!("Serving images on http://localhost:{PORT_HOST}/image");
-    if args.console {
-        println!("Serving console on http://localhost:<placeholder>/");
-    }
+    println!("Serving on port {}",args.port);
 
-    tokio::spawn(async move { serve(app, PORT_HOST).await })
+    tokio::spawn(async move { serve(app, args.port).await })
         .await
         .expect("Unable to Spawn Threads")
 }
