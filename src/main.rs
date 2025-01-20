@@ -39,8 +39,8 @@ struct ProcessParameters {
     transform: String,
     t_param: i32,
     process: String,
-    p_param_1: f32,
-    p_param_2: f32,
+    p1: f32,
+    p2: f32,
 }
 
 fn default_param() -> ProcessParameters {
@@ -53,8 +53,8 @@ fn default_param() -> ProcessParameters {
         transform: "None".to_string(),
         t_param: 0,
         process: "None".to_string(),
-        p_param_1: 0.0,
-        p_param_2: 0.0,
+        p1: 0.0,
+        p2: 0.0,
     }
 }
 
