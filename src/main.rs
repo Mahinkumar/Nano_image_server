@@ -2,6 +2,7 @@ pub mod filter;
 pub mod process;
 pub mod transform;
 pub mod utils;
+pub mod console;
 
 use axum::extract::{Path, Query, Request}; 
 use axum::http::header;
@@ -9,6 +10,7 @@ use axum::response::IntoResponse;
 use axum::routing::get;
 use axum::{Router, ServiceExt};
 
+use console::console_router;
 use filter::{blur, brighten, contrast, grayscale};
 use image::ImageFormat;
 use process::{invert, unsharpen};
@@ -23,9 +25,10 @@ use clap::Parser;
 #[derive(Parser, Debug)]
 #[command(author, version, about, long_about = None)]
 struct Args {
-    /// Toggle console mode
     #[arg(long, default_value_t = 8000, short)]
     port: u16,
+    #[arg(long, default_value_t = 8001, short)]
+    console: u16,
 }
 
 #[derive(Deserialize, Debug)]
@@ -69,9 +72,10 @@ async fn main() {
     println!("Nano Image Server Starting...");
     println!("Serving on port {}",args.port);
 
-    tokio::spawn(async move { serve(app, args.port).await })
-        .await
-        .expect("Unable to Spawn Threads")
+    tokio::join!(
+        serve(app, args.port),
+        serve(console_router(), 8001)
+    );
 }
 
 async fn serve(app: Router, port: u16) {
