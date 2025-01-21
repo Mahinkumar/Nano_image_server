@@ -24,6 +24,7 @@ It is truly asynchronous, Memory safe and thread safe. Built upon axum and tokio
 2. Image operation on fly via url queries
 3. Caching and Instant Retrieval
 4. Support for Linux and Windows
+5. Built-in Image browsing and management web dashboard.
 
 ## Usage
 
@@ -34,13 +35,13 @@ It is truly asynchronous, Memory safe and thread safe. Built upon axum and tokio
 start nano_image_server.exe #Windows
 ```
 3. Access the server from port 8000 in localhost.
-4. To get image go to `/image/<imagename>.<format>`
+4. To get image go to `/<imagename>.<format>`
 
 <hr>
 
 ### Resizing
-1. If needed resizing use queries resx and resy `/image/Nature.jpg?resx=1920&resy=1080`
-2. When resizing use query resfilter `/image/Nature.jpg?resx=1920&resy=1080&resfilter=lanczos`
+1. If needed resizing use queries resx and resy `/Nature.jpg?resx=1920&resy=1080`
+2. When resizing use query resfilter `/Nature.jpg?resx=1920&resy=1080&resfilter=lanczos`
 3. If specified size is 0 or left unspecified they display original size of the image
 4. If resfilter query is unspecified, nearest is chosen by default
 5. Choose from several resize algorithms for resizing using the resfilter query.<br>
