@@ -10,7 +10,7 @@ pub fn resizer(
     filter: &str,
 ) -> Vec<u8> {
     let decoded = decoder(image_bytes);
-    let final_filter = choose_resize_filter(filter,x,y,decoded.height(),decoded.width());
+    let final_filter = choose_resize_filter(filter, x, y, decoded.height(), decoded.width());
 
     let resized = decoded.resize(x, y, final_filter);
 
@@ -54,7 +54,13 @@ pub fn hue_rotate(image_bytes: Vec<u8>, img_format: ImageFormat, transform_param
     encoder(hue_rotated, img_format)
 }
 
-fn choose_resize_filter(filter: &str, x: u32, y: u32, x_original: u32, y_original: u32) -> image::imageops::FilterType {
+fn choose_resize_filter(
+    filter: &str,
+    x: u32,
+    y: u32,
+    x_original: u32,
+    y_original: u32,
+) -> image::imageops::FilterType {
     match filter {
         "nearest" => return image::imageops::FilterType::Nearest,
         "triangle" => return image::imageops::FilterType::Triangle,

@@ -1,12 +1,15 @@
 use std::path::PathBuf;
 
 use axum::{
-    body::Body, extract::Path, http::{header, StatusCode, Uri}, response::{Html, IntoResponse, Response}, routing::{get, Router}
+    body::Body,
+    extract::Path,
+    http::{header, StatusCode, Uri},
+    response::{Html, IntoResponse, Response},
+    routing::{get, Router},
 };
 use rust_embed::Embed;
 use serde_json::json;
 use tokio::fs;
-
 
 #[derive(Embed)]
 #[folder = "./console/"]
@@ -36,7 +39,7 @@ pub fn console_router() -> Router {
         .route("/", get(index_handler))
         .route("/index.html", get(index_handler))
         .route("/assets/{*file}", get(static_handler))
-        .route("/api/{req}",get(api))
+        .route("/api/{req}", get(api))
         .fallback_service(get(not_found))
 }
 
@@ -53,30 +56,34 @@ async fn not_found() -> Html<&'static str> {
     Html("<h1>404</h1><p>Not Found</p>")
 }
 
-async fn api(Path(req): Path<String>) -> Response<Body>{
-    match req.as_str(){
+async fn api(Path(req): Path<String>) -> Response<Body> {
+    match req.as_str() {
         "list" => Html(get_images().await).into_response(),
-        _ => Html("<h1>501</h1><p>Not Implemented</p>").into_response()
+        _ => Html("<h1>501</h1><p>Not Implemented</p>").into_response(),
     }
 }
-
 
 async fn get_images() -> String {
     let base_path = PathBuf::from("./images");
     let mut files = Vec::new();
     let mut dirs = vec![base_path.clone()];
-    
+
     while let Some(dir) = dirs.pop() {
         let mut entries = fs::read_dir(&dir).await.expect("Unable to read dir");
-        
-        while let Some(entry) = entries.next_entry().await.expect("Unable to read dir entry") {
+
+        while let Some(entry) = entries
+            .next_entry()
+            .await
+            .expect("Unable to read dir entry")
+        {
             let path = entry.path();
-            
-            let relative_path = path.strip_prefix(&base_path)
+
+            let relative_path = path
+                .strip_prefix(&base_path)
                 .expect("Failed to strip prefix")
                 .to_string_lossy()
                 .into_owned();
-                
+
             if path.is_dir() {
                 dirs.push(path);
             } else {
@@ -84,8 +91,9 @@ async fn get_images() -> String {
             }
         }
     }
-    
+
     serde_json::to_string(&json!({
         "images": files
-    })).expect("Unable to stringify json")
+    }))
+    .expect("Unable to stringify json")
 }

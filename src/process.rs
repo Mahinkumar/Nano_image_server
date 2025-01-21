@@ -10,10 +10,10 @@ pub fn invert(image_bytes: Vec<u8>, img_format: ImageFormat) -> Vec<u8> {
 pub fn unsharpen(
     image_bytes: Vec<u8>,
     img_format: ImageFormat,
-    sigma: f32,
-    threshold: f32,
+    sigma: i32,
+    threshold: i32,
 ) -> Vec<u8> {
     let decoded = decoder(image_bytes);
-    let unsharpened = decoded.unsharpen(sigma, threshold as i32);
+    let unsharpened = decoded.unsharpen(sigma as f32, threshold);
     encoder(unsharpened, img_format)
 }
