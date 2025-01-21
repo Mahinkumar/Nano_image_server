@@ -1,10 +1,10 @@
+pub mod console;
 pub mod filter;
 pub mod process;
 pub mod transform;
 pub mod utils;
-pub mod console;
 
-use axum::extract::{Path, Query, Request}; 
+use axum::extract::{Path, Query, Request};
 use axum::http::header;
 use axum::response::IntoResponse;
 use axum::routing::get;
@@ -30,6 +30,9 @@ struct Args {
 
     #[arg(long, short, default_value_t = 8000)]
     port: u16,
+
+    #[arg(long, short)]
+    base_url: Option<String>,
 
     #[arg(long, short, default_value_t = 8001)]
     dashboard_port: u16,
@@ -67,23 +70,34 @@ fn default_param() -> ProcessParameters {
 
 const ADDR: [u8; 4] = [127, 0, 0, 1];
 
-
 #[tokio::main]
 async fn main() {
     let args = Args::parse();
-    let app = Router::new().route("/image/{image}", get(handler));
+    let app = Router::new().route("/{image}", get(handler));
+
+    let base_url = match args.base_url {
+        Some(base) => base,
+        None => "localhost".to_string(),
+    };
 
     println!("Nano Image Server Starting...");
-    println!("Serving on port {}",args.port);
+    println!(
+        "Serving images on port {} -> http://{}:{}",
+         args.port,base_url, args.port
+    );
 
     if args.enable_dashboard {
+        println!(
+            "Serving dashboard on port {}  -> http://{}:{}",
+            base_url, args.dashboard_port, args.dashboard_port
+        );
         tokio::join!(
             serve(app, args.port),
             serve(console_router(), args.dashboard_port)
         );
     } else {
         serve(app, args.port).await;
-    }    
+    }
 }
 
 async fn serve(app: Router, port: u16) {
@@ -143,12 +157,7 @@ async fn handler(
                 match process_params.process.to_lowercase().as_str() {
                     "invert" => bytes = invert(bytes, img_format),
                     "unsharpen" => {
-                        bytes = unsharpen(
-                            bytes,
-                            img_format,
-                            process_params.p1,
-                            process_params.p2,
-                        )
+                        bytes = unsharpen(bytes, img_format, process_params.p1, process_params.p2)
                     }
                     _ => {}
                 }
