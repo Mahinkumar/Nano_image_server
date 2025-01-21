@@ -3,6 +3,7 @@ pub mod filter;
 pub mod process;
 pub mod transform;
 pub mod utils;
+pub mod cache;
 
 use axum::extract::{Path, Query, Request};
 use axum::http::header;
@@ -10,11 +11,12 @@ use axum::response::IntoResponse;
 use axum::routing::get;
 use axum::{Router, ServiceExt};
 
+use cache::ImageCache;
 use console::console_router;
 use filter::{blur, brighten, contrast, grayscale};
 use image::ImageFormat;
 use process::{invert, unsharpen};
-use std::hash::{DefaultHasher, Hash, Hasher};
+use std::hash::Hash;
 use std::net::SocketAddr;
 use transform::{flip_horizontal, flip_vertical, hue_rotate, resizer, rotate};
 
@@ -71,7 +73,7 @@ fn default_param() -> ProcessParameters {
 }
 
 #[derive(Deserialize, Hash)]
-struct ImgInfo {
+pub struct ImgInfo {
     name: String,
     format: String,
     params: ProcessParameters,
@@ -121,7 +123,8 @@ async fn handler(
     Path(image): Path<String>,
     Query(process_params): Query<ProcessParameters>,
 ) -> impl IntoResponse {
-    //let now = Instant::now();
+
+    
     let parsed_path: Vec<&str> = image.split('.').collect();
     let img_formats = parsed_path[1];
 
@@ -134,9 +137,8 @@ async fn handler(
     let img_format =
         ImageFormat::from_extension(img_formats).expect("Unable to parse Image format");
 
-    let mut hasher = DefaultHasher::new();
-    meta.hash(&mut hasher);
-    let computed_hash = hasher.finish();
+    let cache = ImageCache::new(meta);
+    let computed_hash = cache.get_hash();
 
     let cache_path = format!("./cache/{}", computed_hash);
     if tokio::fs::try_exists(&cache_path)
