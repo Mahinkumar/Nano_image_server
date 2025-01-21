@@ -23,12 +23,16 @@ use clap::Parser;
 
 /// Simple CLI application with console flag
 #[derive(Parser, Debug)]
-#[command(author, version, about, long_about = None)]
+#[command(author, version, about="Nano Image Server is a tiny, blazingly fast service to serve images with support for image operation on fly.", long_about = None)]
 struct Args {
-    #[arg(long, default_value_t = 8000, short)]
+    #[arg(long, short, default_value_t = false)]
+    enable_dashboard: bool,
+
+    #[arg(long, short, default_value_t = 8000)]
     port: u16,
-    #[arg(long, default_value_t = 8001, short)]
-    console: u16,
+
+    #[arg(long, short, default_value_t = 8001)]
+    dashboard_port: u16,
 }
 
 #[derive(Deserialize, Debug)]
@@ -72,10 +76,14 @@ async fn main() {
     println!("Nano Image Server Starting...");
     println!("Serving on port {}",args.port);
 
-    tokio::join!(
-        serve(app, args.port),
-        serve(console_router(), 8001)
-    );
+    if args.enable_dashboard {
+        tokio::join!(
+            serve(app, args.port),
+            serve(console_router(), args.dashboard_port)
+        );
+    } else {
+        serve(app, args.port).await;
+    }    
 }
 
 async fn serve(app: Router, port: u16) {

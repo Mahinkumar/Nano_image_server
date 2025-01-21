@@ -1,6 +1,6 @@
 [package]
 name = "nano_image_server"
-version = "0.3.2-alpha"
+version = "0.4.1-beta"
 edition = "2021"
 
 [dependencies]
