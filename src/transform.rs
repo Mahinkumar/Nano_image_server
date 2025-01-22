@@ -34,11 +34,11 @@ pub fn flip_vertical(image_bytes: Vec<u8>, img_format: ImageFormat) -> Vec<u8> {
 pub fn rotate(image_bytes: Vec<u8>, img_format: ImageFormat, transform_param: i32) -> Vec<u8> {
     let decoded = decoder(image_bytes);
     let rotated: DynamicImage;
-    if transform_param == 1 {
+    if transform_param == 90 {
         rotated = decoded.rotate90();
-    } else if transform_param == 2 {
+    } else if transform_param == 180 {
         rotated = decoded.rotate180();
-    } else if transform_param == 3 {
+    } else if transform_param == 270 {
         rotated = decoded.rotate270();
     } else {
         rotated = decoded
