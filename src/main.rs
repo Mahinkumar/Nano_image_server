@@ -11,7 +11,7 @@ use axum::response::IntoResponse;
 use axum::routing::get;
 use axum::{Router, ServiceExt};
 
-use cache::ImageCache;
+use cache::{cleanup_cache_if_needed, ImageCache};
 use console::console_router;
 use filter::{blur, brighten, contrast, grayscale};
 use image::ImageFormat;
@@ -161,6 +161,7 @@ async fn handler(
             }
         }
     } else {
+        cleanup_cache_if_needed("./cache").await;
         let input_path = format!("./images/{}", image);
         let do_resize: bool = process_params.resx != 0 || process_params.resy != 0;
         let do_filter: bool = process_params.filter != "None".to_string();
