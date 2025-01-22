@@ -1,30 +1,24 @@
+pub mod cache;
 pub mod console;
-pub mod filter;
-pub mod process;
 pub mod transform;
 pub mod utils;
-pub mod cache;
 
-use axum::extract::{Path, Query, Request};
+use axum::extract::{Path, Query, Request, State};
 use axum::http::header;
 use axum::response::IntoResponse;
 use axum::routing::get;
 use axum::{Router, ServiceExt};
 
-use cache::{cleanup_cache_if_needed, ImageCache};
+use cache::{try_cleanup_cache, ImageCache};
 use console::console_router;
-use filter::{blur, brighten, contrast, grayscale};
 use image::ImageFormat;
-use process::{invert, unsharpen};
-use std::hash::Hash;
 use std::net::SocketAddr;
-use transform::{flip_horizontal, flip_vertical, hue_rotate, resizer, rotate};
+use transform::{resizer, rotate};
+use utils::{decoder, encoder};
 
-use serde::Deserialize;
-//use std::time::Instant; // For timing functions
 use clap::Parser;
+use serde::Deserialize;
 
-/// Simple CLI application with console flag
 #[derive(Parser, Debug)]
 #[command(author, version, about="Nano Image Server is a tiny, blazingly fast service to serve images with support for image operation on fly.", long_about = None)]
 struct Args {
@@ -39,6 +33,9 @@ struct Args {
 
     #[arg(long, short, default_value_t = 8001)]
     dashboard_port: u16,
+
+    #[arg(long, short, default_value_t = false)]
+    no_cache: bool,
 }
 
 #[derive(Deserialize, Debug, Hash, Clone)]
@@ -84,7 +81,9 @@ const ADDR: [u8; 4] = [127, 0, 0, 1];
 #[tokio::main]
 async fn main() {
     let args = Args::parse();
-    let app = Router::new().route("/{image}", get(handler));
+    let app = Router::new()
+        .route("/{image}", get(handler))
+        .with_state(args.no_cache);
 
     let base_url = match args.base_url {
         Some(base) => base,
@@ -122,9 +121,8 @@ async fn serve(app: Router, port: u16) {
 async fn handler(
     Path(image): Path<String>,
     Query(process_params): Query<ProcessParameters>,
+    State(no_cache): State<bool>,
 ) -> impl IntoResponse {
-
-    
     let parsed_path: Vec<&str> = image.split('.').collect();
     let img_formats = parsed_path[1];
 
@@ -134,102 +132,107 @@ async fn handler(
         params: process_params.clone(),
     };
 
+    let img_type = format!("image/{img_formats}");
+
     let img_format =
         ImageFormat::from_extension(img_formats).expect("Unable to parse Image format");
 
     let cache = ImageCache::new(meta);
     let computed_hash = cache.get_hash();
-
-    let cache_path = format!("./cache/{}", computed_hash);
-    if tokio::fs::try_exists(&cache_path)
-        .await
-        .expect("Unable to check")
-    {
-        match tokio::fs::read(cache_path).await {
-            Ok(bytes) => {
-                return (
-                    [(header::CONTENT_TYPE, "image/jpeg")],
-                    axum::body::Body::from(bytes),
-                );
-            }
-            Err(err) => {
-                let message = format!("{err} Error");
-                return (
-                    [(header::CONTENT_TYPE, "message")],
-                    axum::body::Body::from(message),
-                );
-            }
+    
+    if !no_cache {
+        let cache_path = format!("./cache/{}", computed_hash);
+        if tokio::fs::try_exists(&cache_path)
+            .await
+            .expect("Unable to check")
+        {
+            match tokio::fs::read(cache_path).await {
+                Ok(bytes) => {
+                    return (
+                        [(header::CONTENT_TYPE, img_type)],
+                        axum::body::Body::from(bytes),
+                    );
+                }
+                Err(err) => {
+                    let message = format!("{err} Error");
+                    return (
+                        [(header::CONTENT_TYPE, "message".to_owned())],
+                        axum::body::Body::from(message),
+                    );
+                }
+            }   
+        } else{
+            try_cleanup_cache("./cache").await;
         }
-    } else {
-        cleanup_cache_if_needed("./cache").await;
-        let input_path = format!("./images/{}", image);
-        let do_resize: bool = process_params.resx != 0 || process_params.resy != 0;
-        let do_filter: bool = process_params.filter != "None".to_string();
-        let do_transform: bool = process_params.transform != "None".to_string();
-        let do_process: bool = process_params.process != "None".to_string();
+    }
+    
+    let input_path = format!("./images/{}", image);
+    let do_resize: bool = process_params.resx != 0 || process_params.resy != 0;
+    let do_filter: bool = process_params.filter != "None".to_string();
+    let do_transform: bool = process_params.transform != "None".to_string();
+    let do_process: bool = process_params.process != "None".to_string();
 
-        match tokio::fs::read(&input_path).await {
-            Ok(mut bytes) => {
+    match tokio::fs::read(&input_path).await {
+        Ok(mut bytes) => {
+            if do_resize || do_filter || do_transform || do_process {
+                let mut decoded_img = decoder(bytes);
                 if do_resize {
-                    bytes = resizer(
-                        bytes,
-                        img_format,
+                    decoded_img = resizer(
+                        decoded_img,
                         process_params.resx,
                         process_params.resy,
                         &process_params.resfilter,
                     );
                 }
                 if do_filter {
-                    match process_params.filter.to_lowercase().as_str() {
-                        "blur" => bytes = blur(bytes, img_format, process_params.f_param as f32),
-                        "bw" => bytes = grayscale(bytes, img_format),
-                        "brighten" => {
-                            bytes = brighten(bytes, img_format, process_params.f_param as f32)
-                        }
-                        "contrast" => {
-                            bytes = contrast(bytes, img_format, process_params.f_param as f32)
-                        }
-                        _ => {}
+                    decoded_img = match process_params.filter.to_lowercase().as_str() {
+                        "blur" => decoded_img.blur(process_params.f_param as f32),
+                        "bw" => decoded_img.grayscale(),
+                        "brighten" => decoded_img.brighten(process_params.f_param),
+                        "contrast" => decoded_img.adjust_contrast(process_params.f_param as f32),
+                        _ => decoded_img,
                     }
                 }
                 if do_transform {
-                    match process_params.transform.to_lowercase().as_str() {
-                        "fliph" => bytes = flip_horizontal(bytes, img_format),
-                        "flipv" => bytes = flip_vertical(bytes, img_format),
-                        "rotate" => bytes = rotate(bytes, img_format, process_params.t_param),
-                        "hue_rotate" => {
-                            bytes = hue_rotate(bytes, img_format, process_params.t_param)
-                        }
-                        _ => {}
+                    decoded_img = match process_params.transform.to_lowercase().as_str() {
+                        "fliph" => decoded_img.fliph(),
+                        "flipv" => decoded_img.flipv(),
+                        "rotate" => rotate(decoded_img, process_params.t_param),
+                        "hue_rotate" => decoded_img.huerotate(process_params.t_param),
+                        _ => decoded_img,
                     }
                 }
                 if do_process {
-                    match process_params.process.to_lowercase().as_str() {
-                        "invert" => bytes = invert(bytes, img_format),
-                        "unsharpen" => {
-                            bytes =
-                                unsharpen(bytes, img_format, process_params.p1, process_params.p2)
+                    decoded_img = match process_params.process.to_lowercase().as_str() {
+                        "invert" => {
+                            decoded_img.invert();
+                            decoded_img
                         }
-                        _ => {}
+                        "unsharpen" => {
+                            decoded_img.unsharpen(process_params.p1 as f32, process_params.p2)
+                        }
+                        _ => decoded_img,
                     }
                 }
-
+                bytes = encoder(decoded_img, img_format);
+            }
+            if !no_cache{
                 let write_path = format!("./cache/{}", &computed_hash);
                 tokio::fs::write(write_path, &bytes)
-                    .await
-                    .expect("UNable to write");
-                return (
-                    [(header::CONTENT_TYPE, "image/jpeg")],
-                    axum::body::Body::from(bytes),
-                );
+                .await
+                .expect("Unable to write");
             }
-            Err(err) => {
-                let message = format!("{err} Error");
-                return (
-                    [(header::CONTENT_TYPE, "message")],
-                    axum::body::Body::from(message),
-                );
-            }
+            return (
+                [(header::CONTENT_TYPE, img_type)],
+                axum::body::Body::from(bytes),
+            );
+        }
+        Err(err) => {
+            let message = format!("{err} Error");
+            return (
+                [(header::CONTENT_TYPE, "message".to_owned())],
+                axum::body::Body::from(message),
+            );
         }
     }
 }

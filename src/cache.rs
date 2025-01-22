@@ -28,7 +28,7 @@ impl ImageCache{
 
 
 
-pub async fn cleanup_cache_if_needed(cache_dir: &str){
+pub async fn try_cleanup_cache(cache_dir: &str){
     let mut total_size = 0;
     let mut files = Vec::new();
     
