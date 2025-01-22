@@ -21,10 +21,10 @@ It is truly asynchronous, Memory safe and thread safe. Built upon axum and tokio
 
 ## Available Features
 1. Low latency Image delivery
-2. Image operation on fly via url queries
-3. Caching and Instant Retrieval
-4. Support for Linux and Windows
-5. Built-in Image browsing and management web dashboard.
+2. Caching and Instant Retrieval
+3. Support for Linux and Windows
+4. Built-in Image browsing and management web dashboard.
+5. Basic image operations on fly via url queries
 
 ## Usage
 
@@ -39,7 +39,8 @@ start nano_image_server.exe #Windows
 
 <hr>
 
-### Resizing
+### Image operations
+#### Resizing
 1. If needed resizing use queries resx and resy `/Nature.jpg?resx=1920&resy=1080`
 2. When resizing use query resfilter `/Nature.jpg?resx=1920&resy=1080&resfilter=lanczos`
 3. If specified size is 0 or left unspecified they display original size of the image
@@ -54,21 +55,21 @@ start nano_image_server.exe #Windows
     - Optimal
 6. Optimal choose the best algorithm possible based on the resize request. 
 
-### Filters
+#### Filters
 The availible filters are 
 1. Blur
 2. Grayscale 
 3. Brighten
 4. Contrast
 
-### Transforms
+#### Transforms
 The availible transforms are
 1. Flip horizontal
 2. Flip Vertical
 3. Rotate (90deg, 180deg, 270deg)
 4. Hue rotate
 
-### Processing
+#### Processing
 The availible proccessing are
 1. Invert
 2. Unsharpen
