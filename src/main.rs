@@ -1,5 +1,4 @@
 pub mod cache;
-pub mod console;
 pub mod transform;
 pub mod utils;
 
@@ -10,7 +9,6 @@ use axum::routing::get;
 use axum::{Router, ServiceExt};
 
 use cache::{try_cleanup_cache, ImageCache};
-use console::console_router;
 use image::ImageFormat;
 use std::net::SocketAddr;
 use transform::{resizer, rotate};
@@ -22,17 +20,11 @@ use serde::Deserialize;
 #[derive(Parser, Debug, Clone)]
 #[command(author, version, about="Nano Image Server is a tiny, blazingly fast service to serve images with support for basic image operation on fly.", long_about = None)]
 pub struct Args {
-    #[arg(long, short, default_value_t = false)]
-    enable_dashboard: bool,
-
     #[arg(long, short, default_value_t = 8000)]
     port: u16,
 
     #[arg(long, short)]
     base_url: Option<String>,
-
-    #[arg(long, short, default_value_t = 8001)]
-    dashboard_port: u16,
 
     #[arg(long, short, default_value_t = false)]
     no_cache: bool,
@@ -97,18 +89,7 @@ async fn main() {
         args.port, base_url, args.port
     );
 
-    if args.enable_dashboard {
-        println!(
-            "Serving dashboard on port {}  -> http://{}:{}",
-            args.dashboard_port, base_url, args.dashboard_port
-        );
-        tokio::join!(
-            serve(app, args.port),
-            serve(console_router(args.clone()), args.dashboard_port)
-        );
-    } else {
-        serve(app, args.port).await;
-    }
+    serve(app, args.port).await;
 }
 
 async fn serve(app: Router, port: u16) {
