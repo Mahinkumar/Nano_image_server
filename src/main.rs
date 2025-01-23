@@ -19,9 +19,9 @@ use utils::{decoder, encoder};
 use clap::Parser;
 use serde::Deserialize;
 
-#[derive(Parser, Debug)]
+#[derive(Parser, Debug, Clone)]
 #[command(author, version, about="Nano Image Server is a tiny, blazingly fast service to serve images with support for basic image operation on fly.", long_about = None)]
-struct Args {
+pub struct Args {
     #[arg(long, short, default_value_t = false)]
     enable_dashboard: bool,
 
@@ -37,6 +37,7 @@ struct Args {
     #[arg(long, short, default_value_t = false)]
     no_cache: bool,
 }
+
 
 #[derive(Deserialize, Debug, Hash, Clone)]
 #[serde(default = "default_param")]
@@ -83,11 +84,11 @@ async fn main() {
     let args = Args::parse();
     let app = Router::new()
         .route("/{image}", get(handler))
-        .with_state(args.no_cache);
+        .with_state(args.clone());
 
-    let base_url = match args.base_url {
+    let base_url = match &args.base_url {
         Some(base) => base,
-        None => "localhost".to_string(),
+        None => "localhost",
     };
 
     println!("Nano Image Server Starting...");
@@ -99,11 +100,11 @@ async fn main() {
     if args.enable_dashboard {
         println!(
             "Serving dashboard on port {}  -> http://{}:{}",
-            base_url, args.dashboard_port, args.dashboard_port
+            args.dashboard_port, base_url, args.dashboard_port
         );
         tokio::join!(
             serve(app, args.port),
-            serve(console_router(), args.dashboard_port)
+            serve(console_router(args.clone()), args.dashboard_port)
         );
     } else {
         serve(app, args.port).await;
@@ -121,7 +122,7 @@ async fn serve(app: Router, port: u16) {
 async fn handler(
     Path(image): Path<String>,
     Query(process_params): Query<ProcessParameters>,
-    State(no_cache): State<bool>,
+    State(args): State<Args>,
 ) -> impl IntoResponse {
     let parsed_path: Vec<&str> = image.split('.').collect();
     let img_formats = parsed_path[1];
@@ -140,7 +141,7 @@ async fn handler(
     let cache = ImageCache::new(meta);
     let computed_hash = cache.get_hash();
     
-    if !no_cache {
+    if !args.no_cache {
         let cache_path = format!("./cache/{}", computed_hash);
         if tokio::fs::try_exists(&cache_path)
             .await
@@ -216,7 +217,7 @@ async fn handler(
                 }
                 bytes = encoder(decoded_img, img_format);
             }
-            if !no_cache{
+            if !args.no_cache{
                 let write_path = format!("./cache/{}", &computed_hash);
                 tokio::fs::write(write_path, &bytes)
                 .await

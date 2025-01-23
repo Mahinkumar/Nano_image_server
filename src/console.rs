@@ -2,7 +2,7 @@ use std::path::PathBuf;
 
 use axum::{
     body::Body,
-    extract::Path,
+    extract::{Path, State},
     http::{header, StatusCode, Uri},
     response::{Html, IntoResponse, Response},
     routing::{get, Router},
@@ -11,9 +11,13 @@ use rust_embed::Embed;
 use serde_json::json;
 use tokio::fs;
 
+use crate::Args;
+
 #[derive(Embed)]
 #[folder = "./console/"]
 struct Asset;
+
+
 
 pub struct StaticFile<T>(pub T);
 
@@ -34,13 +38,14 @@ where
     }
 }
 
-pub fn console_router() -> Router {
+pub fn console_router(args: Args) -> Router {
     Router::new()
         .route("/", get(index_handler))
         .route("/index.html", get(index_handler))
         .route("/assets/{*file}", get(static_handler))
         .route("/api/{req}", get(api))
         .fallback_service(get(not_found))
+        .with_state(args)
 }
 
 async fn index_handler() -> impl IntoResponse {
@@ -56,14 +61,14 @@ async fn not_found() -> Html<&'static str> {
     Html("<h1>404</h1><p>Not Found</p>")
 }
 
-async fn api(Path(req): Path<String>) -> Response<Body> {
+async fn api(Path(req): Path<String>,State(args):State<Args>) -> Response<Body> {
     match req.as_str() {
-        "list" => Html(get_images().await).into_response(),
+        "list" => Html(get_images(args).await).into_response(),
         _ => Html("<h1>501</h1><p>Not Implemented</p>").into_response(),
     }
 }
 
-async fn get_images() -> String {
+async fn get_images(args: Args) -> String {
     let base_path = PathBuf::from("./images");
     let mut files = Vec::new();
     let mut dirs = vec![base_path.clone()];
@@ -78,11 +83,18 @@ async fn get_images() -> String {
         {
             let path = entry.path();
 
-            let relative_path = path
+            let relative_paths = path
                 .strip_prefix(&base_path)
                 .expect("Failed to strip prefix")
                 .to_string_lossy()
                 .into_owned();
+
+            let base_url = match &args.base_url {
+                Some(base) => base,
+                None => "localhost",
+            };
+
+            let relative_path = "http://".to_string() + base_url + ":" + &args.port.to_string() + "/" + &relative_paths;
 
             if path.is_dir() {
                 dirs.push(path);
