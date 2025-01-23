@@ -39,58 +39,63 @@ start nano_image_server.exe #Windows
 
 <hr>
 
-### Image operations
-#### Resizing
-1. If needed resizing use queries resx and resy `/Nature.jpg?resx=1920&resy=1080`
-2. When resizing use query resfilter `/Nature.jpg?resx=1920&resy=1080&resfilter=lanczos`
-3. If specified size is 0 or left unspecified they display original size of the image
-4. If resfilter query is unspecified, nearest is chosen by default
-5. Choose from several resize algorithms for resizing using the resfilter query.<br>
-    Availible resize algorithms are,
-    - Nearest
-    - Triangle
-    - Catmullrom
-    - Gaussian
-    - Lanczos
-    - Optimal
-6. Optimal choose the best algorithm possible based on the resize request. 
+## Availible Image operations
 
-#### Filters
-The availible filters are 
-1. Blur
-2. Grayscale 
-3. Brighten
-4. Contrast
+### Resizing Filters
 
-#### Transforms
-The availible transforms are
-1. Flip horizontal
-2. Flip Vertical
-3. Rotate (90deg, 180deg, 270deg)
-4. Hue rotate
+| Algorithm | Description | Query |
+|-----------|-------------|-------|
+| Nearest | Simplest method, nearest neighbor interpolation | resfilter=nearest |
+| Triangle | Linear interpolation, moderate quality scaling | resfilter=triangle |
+| Catmull-Rom | Cubic interpolation, preserves image details | resfilter=catmullrom |
+| Gaussian | Soft, smooth scaling, reduces sharpness | resfilter=gaussian |
+| Lanczos | High-quality resampling, preserves details | resfilter=lanczos |
+| Optimal | Automatically selects best algorithm | resfilter=optimal |
 
-#### Processing
-The availible proccessing are
-1. Invert
-2. Unsharpen
+### Image Filters
 
-### Supported Image formats
+| Filter | Description | Query      | f_param (argument) |
+|--------|-------------|------------|--------------------|
+| Blur | Reduces image sharpness, softens details | filter=blur | Yes |
+| Grayscale | Converts image to black and white | filter=bw | No|
+| Brighten | Increases overall image luminosity | filter=brighten | Yes |
+| Contrast | Enhances difference between light and dark areas | filter=contrast | Yes |
+
+### Image Transforms
+
+| Transform | Description | Query | t_param (argument) |
+|-----------|-------------|-------|--------------------|
+| Flip Horizontal | Mirrors image vertically | transform=fliph | No |
+| Flip Vertical | Mirrors image horizontally | transform=flipv | No |
+| Rotate | Rotation at 90°, 180°, 270° angles | transform=rotate | Yes |
+| Hue Rotate | Shifts color spectrum | transform=huerotate | Yes |
+
+### Image Processing 
+
+| Processing | Description | Query | p1 (argument) | p2 (argument) |
+|------------|-------------|-------|---------------|---------------|
+| Invert | Reverses image colors, creating a negative effect | process=invert | no | no |
+| Unsharpen | Enhances image details by reducing blur | process=unsharpen | yes | yes |
+
+---
+
+## Supported Image formats
 The following formats are supported via encoders and decoders from the Image-rs Library
 
 | Format   | Decoding                                  | Encoding                                |
 | -------- | ----------------------------------------- | --------------------------------------- |
-| AVIF     | Yes \*                                    | Yes (lossy only)                        |
-| BMP      | Yes                                       | Yes                                     |
-| Farbfeld | Yes                                       | Yes                                     |
-| GIF      | Yes                                       | Yes                                     |
-| HDR      | Yes                                       | Yes                                     |
-| ICO      | Yes                                       | Yes                                     |
-| JPEG     | Yes                                       | Yes                                     |
-| EXR      | Yes                                       | Yes                                     |
-| PNG      | Yes                                       | Yes                                     |
-| PNM      | Yes                                       | Yes                                     |
-| QOI      | Yes                                       | Yes                                     |
-| TGA      | Yes                                       | Yes                                     |
-| TIFF     | Yes                                       | Yes                                     |
-| WebP     | Yes                                       | Yes (lossless only)                     |
+| AVIF     | Yes\*                                    | Yes(lossy only)                        |
+| BMP      | Yes                                      | Yes                                    |
+| Farbfeld | Yes                                      | Yes                                    |
+| GIF      | Yes                                      | Yes                                    |
+| HDR      | Yes                                      | Yes                                    |
+| ICO      | Yes                                      | Yes                                    |
+| JPEG     | Yes                                      | Yes                                    |
+| EXR      | Yes                                      | Yes                                    |
+| PNG      | Yes                                      | Yes                                    |
+| PNM      | Yes                                      | Yes                                    |
+| QOI      | Yes                                      | Yes                                    |
+| TGA      | Yes                                      | Yes                                    |
+| TIFF     | Yes                                      | Yes                                    |
+| WebP     | Yes                                      | Yes(lossless only)                     |
 <hr>

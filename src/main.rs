@@ -20,7 +20,7 @@ use clap::Parser;
 use serde::Deserialize;
 
 #[derive(Parser, Debug)]
-#[command(author, version, about="Nano Image Server is a tiny, blazingly fast service to serve images with support for image operation on fly.", long_about = None)]
+#[command(author, version, about="Nano Image Server is a tiny, blazingly fast service to serve images with support for basic image operation on fly.", long_about = None)]
 struct Args {
     #[arg(long, short, default_value_t = false)]
     enable_dashboard: bool,
