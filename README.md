@@ -23,8 +23,7 @@ It is truly asynchronous, Memory safe and thread safe. Built upon axum and tokio
 1. Low latency Image delivery
 2. Caching and Instant Retrieval
 3. Support for Linux and Windows
-4. Built-in Image browsing and management web dashboard.
-5. Basic image operations on fly via url queries
+4. Basic image operations on fly via url queries
 
 ## Usage
 
