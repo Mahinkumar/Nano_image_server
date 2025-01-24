@@ -45,6 +45,7 @@ struct ProcessParameters {
     process: String,
     p1: i32,
     p2: i32,
+    to: String
 }
 
 fn default_param() -> ProcessParameters {
@@ -59,6 +60,7 @@ fn default_param() -> ProcessParameters {
         process: "None".to_string(),
         p1: 0,
         p2: 0,
+        to: "None".to_string()
     }
 }
 
@@ -114,10 +116,7 @@ async fn handler(
         params: process_params.clone(),
     };
 
-    let img_type = format!("image/{img_formats}");
-
-    let img_format =
-        ImageFormat::from_extension(img_formats).expect("Unable to parse Image format");
+    let mut img_type = format!("image/{img_formats}");
 
     let cache = ImageCache::new(meta);
     let computed_hash = cache.get_hash();
@@ -153,10 +152,11 @@ async fn handler(
     let do_filter: bool = process_params.filter != "None".to_string();
     let do_transform: bool = process_params.transform != "None".to_string();
     let do_process: bool = process_params.process != "None".to_string();
+    let do_convert: bool = process_params.to != "None".to_string();
 
     match tokio::fs::read(&input_path).await {
         Ok(mut bytes) => {
-            if do_resize || do_filter || do_transform || do_process {
+            if do_resize || do_filter || do_transform || do_process || do_convert {
                 let mut decoded_img = decoder(bytes);
                 if do_resize {
                     decoded_img = resizer(
@@ -196,6 +196,14 @@ async fn handler(
                         _ => decoded_img,
                     }
                 }
+                let img_format: ImageFormat;
+                if do_convert {
+                    img_format = ImageFormat::from_extension(&process_params.to).expect("Unable to parse Image format");
+                    img_type = format!("image/{}",process_params.to);
+                } else {
+                    img_format = ImageFormat::from_extension(img_formats).expect("Unable to parse Image format");
+                }
+                println!("{:?},{}",img_format,img_formats);
                 bytes = encoder(decoded_img, img_format);
             }
             if !args.no_cache{
