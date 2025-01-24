@@ -10,6 +10,7 @@ use axum::{Router, ServiceExt};
 
 use cache::{try_cleanup_cache, ImageCache};
 use image::ImageFormat;
+use tokio::net::TcpSocket;
 use std::net::SocketAddr;
 use transform::{resizer, rotate};
 use utils::{decoder, encoder};
@@ -96,7 +97,16 @@ async fn main() {
 
 async fn serve(app: Router, port: u16) {
     let addr = SocketAddr::from((ADDR, port));
-    let listener = tokio::net::TcpListener::bind(addr).await.unwrap();
+    
+    let socket = TcpSocket::new_v4().unwrap();
+    
+    socket.set_send_buffer_size(524_288).unwrap();
+    socket.set_recv_buffer_size(524_288).unwrap();
+    socket.set_nodelay(true).unwrap();
+    
+    socket.bind(addr).unwrap();
+    let listener = socket.listen(2048).unwrap();
+    
     axum::serve(listener, ServiceExt::<Request>::into_make_service(app))
         .await
         .unwrap();
@@ -203,7 +213,6 @@ async fn handler(
                 } else {
                     img_format = ImageFormat::from_extension(img_formats).expect("Unable to parse Image format");
                 }
-                println!("{:?},{}",img_format,img_formats);
                 bytes = encoder(decoded_img, img_format);
             }
             if !args.no_cache{
