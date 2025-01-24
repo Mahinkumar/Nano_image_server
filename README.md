@@ -76,6 +76,12 @@ start nano_image_server.exe #Windows
 | Invert | Reverses image colors, creating a negative effect | process=invert | no | no |
 | Unsharpen | Enhances image details by reducing blur | process=unsharpen | yes | yes |
 
+## Image Conversion
+
+| Processing | Description | Query |
+|------------|-------------|-------|
+| Conversion | Convert image to different format | to=[img_format] |
+
 ---
 
 ## Supported Image formats
