@@ -4,31 +4,28 @@ use std::{
     hash::{DefaultHasher, Hash, Hasher},
     sync::Arc,
 };
-use tokio::sync::Mutex;
-
-pub type Db = Arc<Mutex<DashMap<u64, Vec<u8>>>>;
+use tokio::sync::RwLock;
 
 use crate::ImgInfo;
 
 // const MAX_CACHE_SIZE_BYTES: u64 = 1024 * 1024 * 1024;
-
 // ImageCache{info:imginfo,hash:computed_hash}
 
 #[derive(Clone)]
 pub struct ImageCache {
-    ttl_mem_db: Arc<Mutex<DashMap<DateTime<Utc>, u64>>>,
-    ttl_storage_db: Arc<Mutex<DashMap<DateTime<Utc>, u64>>>,
-    mem_db: Arc<Mutex<DashMap<u64, Vec<u8>>>>,
-    storage_db: Arc<Mutex<DashSet<u64>>>,
+    ttl_mem_db: Arc<RwLock<DashMap<DateTime<Utc>, u64>>>,
+    ttl_storage_db: Arc<RwLock<DashMap<DateTime<Utc>, u64>>>,
+    mem_db: Arc<RwLock<DashMap<u64, Vec<u8>>>>,
+    storage_db: Arc<RwLock<DashSet<u64>>>,
 }
 
 impl ImageCache {
     pub fn new_cache() -> ImageCache {
         ImageCache {
-            ttl_mem_db: Arc::new(Mutex::new(DashMap::new())),
-            ttl_storage_db: Arc::new(Mutex::new(DashMap::new())),
-            mem_db: Arc::new(Mutex::new(DashMap::new())),
-            storage_db: Arc::new(Mutex::new(DashSet::new())),
+            ttl_mem_db: Arc::new(RwLock::new(DashMap::new())),
+            ttl_storage_db: Arc::new(RwLock::new(DashMap::new())),
+            mem_db: Arc::new(RwLock::new(DashMap::new())),
+            storage_db: Arc::new(RwLock::new(DashSet::new())),
         }
     }
 
@@ -37,13 +34,13 @@ impl ImageCache {
 
         let utc: DateTime<Utc> = Utc::now();
 
-        self.ttl_mem_db.lock().await.insert(utc, computed_hash);
-        self.ttl_storage_db.lock().await.insert(utc, computed_hash);
+        self.ttl_mem_db.write().await.insert(utc, computed_hash);
+        self.ttl_storage_db.write().await.insert(utc, computed_hash);
         self.mem_db
-            .lock()
+            .write()
             .await
             .insert(computed_hash, image_bytes.clone());
-        self.storage_db.lock().await.insert(computed_hash);
+        self.storage_db.blocking_write().insert(computed_hash);
 
         ImageCache::cache_in_storage(&computed_hash, &image_bytes).await
     }
@@ -55,17 +52,17 @@ impl ImageCache {
     }
 
     pub async fn get(&mut self, hash: u64) -> Option<Vec<u8>> {
-        let mdb = self.mem_db.lock().await;
+        let mdb = self.mem_db.read().await;
         if mdb.contains_key(&hash) {
-            println!("Found in Tier 1 cache (Memory)");
-            return Some(mdb.get(&hash).expect("Unable to get bytes").to_vec());
+            // println!("Found in Tier 1 cache (Memory)");
+            let byte_val = mdb.get(&hash).expect("Unable to get bytes").to_vec();
+            return Some(byte_val);
+            
         } else {
-            let sdb = self.storage_db.lock().await;
+            let sdb = self.storage_db.read().await;
             let read_path = format!("./cache/{}", hash.to_string());
             if sdb.contains(&hash) {
-                println!(
-                    "Found in Tier 2 cache db (Disc) -> Transferring to Tier 1 cache (Memory)"
-                );
+                // println!("Found in Tier 2 cache db (Disc) -> Transferring to Tier 1 cache (Memory)");
                 let read_bytes = tokio::fs::read(read_path)
                     .await
                     .expect("Unable to read cache");
@@ -75,7 +72,7 @@ impl ImageCache {
                 .await
                 .expect("Unable to check")
             {
-                println!("Found in Tier 2 cache (Disc) -> Transferring to Tier 1 cache (Memory)");
+                // println!("Found in Tier 2 cache (Disc) -> Transferring to Tier 1 cache (Memory)");
                 let read_bytes = tokio::fs::read(read_path)
                     .await
                     .expect("Unable to read bytes");
