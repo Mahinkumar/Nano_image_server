@@ -127,12 +127,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7c02d123df017efcdfbd739ef81735b36c5ba83ec3c59c80a9d7ecc718f92e50"
 
 [[package]]
-name = "async-once-cell"
-version = "0.5.4"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4288f83726785267c6f2ef073a3d83dc3f9b81464e9f99898240cced85fce35a"
-
-[[package]]
 name = "autocfg"
 version = "1.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1120,15 +1114,12 @@ dependencies = [
 name = "nano_image_server"
 version = "0.5.0-beta"
 dependencies = [
- "async-once-cell",
  "axum",
- "bytes",
  "chrono",
  "clap",
  "dashmap",
  "image",
  "mime_guess",
- "once_cell",
  "rust-embed",
  "rustls",
  "serde",
