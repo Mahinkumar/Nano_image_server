@@ -8,10 +8,10 @@ use axum::response::IntoResponse;
 use axum::routing::get;
 use axum::{Router, ServiceExt};
 
-use cache::{try_cleanup_cache, ImageCache};
+use cache::ImageCache;
 use image::ImageFormat;
-use tokio::net::TcpSocket;
 use std::net::SocketAddr;
+use tokio::net::TcpSocket;
 use transform::{resizer, rotate};
 use utils::{decoder, encoder};
 
@@ -31,7 +31,6 @@ pub struct Args {
     no_cache: bool,
 }
 
-
 #[derive(Deserialize, Debug, Hash, Clone)]
 #[serde(default = "default_param")]
 
@@ -46,7 +45,7 @@ struct ProcessParameters {
     process: String,
     p1: i32,
     p2: i32,
-    to: String
+    to: String,
 }
 
 fn default_param() -> ProcessParameters {
@@ -61,25 +60,46 @@ fn default_param() -> ProcessParameters {
         process: "None".to_string(),
         p1: 0,
         p2: 0,
-        to: "None".to_string()
+        to: "None".to_string(),
     }
 }
 
-#[derive(Deserialize, Hash)]
+#[derive(Deserialize, Hash, Clone)]
 pub struct ImgInfo {
     name: String,
     format: String,
     params: ProcessParameters,
 }
 
+#[derive(Clone)]
+pub struct AppState {
+    args: Args,
+    image_cache: ImageCache,
+}
+
 const ADDR: [u8; 4] = [127, 0, 0, 1];
 
 #[tokio::main]
 async fn main() {
+    let cache_db: ImageCache = ImageCache::new_cache();
+
+    // match db.try_lock() {
+    //     Ok(mut locked_db) => {
+    //         locked_db.insert(self.hash,Bytes::from(self.bytes.clone()));
+    //     },
+    //     Err(_) => {
+    //         println!("Unable to get lock");
+    //     }
+    // }
     let args = Args::parse();
+
+    let app_state: AppState = AppState {
+        args: args.clone(),
+        image_cache: cache_db,
+    };
     let app = Router::new()
         .route("/{image}", get(handler))
-        .with_state(args.clone());
+        .with_state(app_state);
 
     let base_url = match &args.base_url {
         Some(base) => base,
@@ -97,16 +117,16 @@ async fn main() {
 
 async fn serve(app: Router, port: u16) {
     let addr = SocketAddr::from((ADDR, port));
-    
+
     let socket = TcpSocket::new_v4().unwrap();
-    
+
     socket.set_send_buffer_size(524_288).unwrap();
     socket.set_recv_buffer_size(524_288).unwrap();
     socket.set_nodelay(true).unwrap();
-    
+
     socket.bind(addr).unwrap();
     let listener = socket.listen(2048).unwrap();
-    
+
     axum::serve(listener, ServiceExt::<Request>::into_make_service(app))
         .await
         .unwrap();
@@ -115,7 +135,7 @@ async fn serve(app: Router, port: u16) {
 async fn handler(
     Path(image): Path<String>,
     Query(process_params): Query<ProcessParameters>,
-    State(args): State<Args>,
+    State(mut app_state): State<AppState>,
 ) -> impl IntoResponse {
     let parsed_path: Vec<&str> = image.split('.').collect();
     let img_formats = parsed_path[1];
@@ -128,35 +148,20 @@ async fn handler(
 
     let mut img_type = format!("image/{img_formats}");
 
-    let cache = ImageCache::new(meta);
-    let computed_hash = cache.get_hash();
-    
-    if !args.no_cache {
-        let cache_path = format!("./cache/{}", computed_hash);
-        if tokio::fs::try_exists(&cache_path)
-            .await
-            .expect("Unable to check")
-        {
-            match tokio::fs::read(cache_path).await {
-                Ok(bytes) => {
-                    return (
-                        [(header::CONTENT_TYPE, img_type)],
-                        axum::body::Body::from(bytes),
-                    );
-                }
-                Err(err) => {
-                    let message = format!("{err} Error");
-                    return (
-                        [(header::CONTENT_TYPE, "message".to_owned())],
-                        axum::body::Body::from(message),
-                    );
-                }
-            }   
-        } else{
-            try_cleanup_cache("./cache").await;
+    let hash = ImageCache::get_hash(&meta);
+
+    if !app_state.args.no_cache {
+        match app_state.image_cache.get(hash).await {
+            Some(val) => {
+                return (
+                    [(header::CONTENT_TYPE, img_type)],
+                    axum::body::Body::from(val),
+                );
+            }
+            None => {}
         }
     }
-    
+
     let input_path = format!("./images/{}", image);
     let do_resize: bool = process_params.resx != 0 || process_params.resy != 0;
     let do_filter: bool = process_params.filter != "None".to_string();
@@ -208,18 +213,17 @@ async fn handler(
                 }
                 let img_format: ImageFormat;
                 if do_convert {
-                    img_format = ImageFormat::from_extension(&process_params.to).expect("Unable to parse Image format");
-                    img_type = format!("image/{}",process_params.to);
+                    img_format = ImageFormat::from_extension(&process_params.to)
+                        .expect("Unable to parse Image format");
+                    img_type = format!("image/{}", process_params.to);
                 } else {
-                    img_format = ImageFormat::from_extension(img_formats).expect("Unable to parse Image format");
+                    img_format = ImageFormat::from_extension(img_formats)
+                        .expect("Unable to parse Image format");
                 }
                 bytes = encoder(decoded_img, img_format);
             }
-            if !args.no_cache{
-                let write_path = format!("./cache/{}", &computed_hash);
-                tokio::fs::write(write_path, &bytes)
-                .await
-                .expect("Unable to write");
+            if !app_state.args.no_cache {
+                app_state.image_cache.insert(bytes.clone(), meta).await
             }
             return (
                 [(header::CONTENT_TYPE, img_type)],
