@@ -1,11 +1,6 @@
 use chrono::{DateTime, Utc};
 use dashmap::{DashMap, DashSet};
-use std::{
-    hash::{DefaultHasher, Hash, Hasher},
-    sync::Arc,
-};
-use tokio::sync::RwLock;
-
+use std::hash::{DefaultHasher, Hash, Hasher};
 use crate::ImgInfo;
 
 // const MAX_CACHE_SIZE_BYTES: u64 = 1024 * 1024 * 1024;
@@ -13,19 +8,19 @@ use crate::ImgInfo;
 
 #[derive(Clone)]
 pub struct ImageCache {
-    ttl_mem_db: Arc<RwLock<DashMap<DateTime<Utc>, u64>>>,
-    ttl_storage_db: Arc<RwLock<DashMap<DateTime<Utc>, u64>>>,
-    mem_db: Arc<RwLock<DashMap<u64, Vec<u8>>>>,
-    storage_db: Arc<RwLock<DashSet<u64>>>,
+    ttl_mem_db: DashMap<DateTime<Utc>, u64>,
+    ttl_storage_db: DashMap<DateTime<Utc>, u64>,
+    mem_db: DashMap<u64, Vec<u8>>,
+    storage_db: DashSet<u64>,
 }
 
 impl ImageCache {
     pub fn new_cache() -> ImageCache {
         ImageCache {
-            ttl_mem_db: Arc::new(RwLock::new(DashMap::new())),
-            ttl_storage_db: Arc::new(RwLock::new(DashMap::new())),
-            mem_db: Arc::new(RwLock::new(DashMap::new())),
-            storage_db: Arc::new(RwLock::new(DashSet::new())),
+            ttl_mem_db: DashMap::new(),
+            ttl_storage_db: DashMap::new(),
+            mem_db: DashMap::new(),
+            storage_db: DashSet::new(),
         }
     }
 
@@ -34,13 +29,10 @@ impl ImageCache {
 
         let utc: DateTime<Utc> = Utc::now();
 
-        self.ttl_mem_db.write().await.insert(utc, computed_hash);
-        self.ttl_storage_db.write().await.insert(utc, computed_hash);
-        self.mem_db
-            .write()
-            .await
-            .insert(computed_hash, image_bytes.clone());
-        self.storage_db.blocking_write().insert(computed_hash);
+        self.ttl_mem_db.insert(utc, computed_hash);
+        self.ttl_storage_db.insert(utc, computed_hash);
+        self.mem_db.insert(computed_hash, image_bytes.clone());
+        self.storage_db.insert(computed_hash);
 
         ImageCache::cache_in_storage(&computed_hash, &image_bytes).await
     }
@@ -52,14 +44,14 @@ impl ImageCache {
     }
 
     pub async fn get(&mut self, hash: u64) -> Option<Vec<u8>> {
-        let mdb = self.mem_db.read().await;
+        let mdb = &self.mem_db;
         if mdb.contains_key(&hash) {
             // println!("Found in Tier 1 cache (Memory)");
             let byte_val = mdb.get(&hash).expect("Unable to get bytes").to_vec();
             return Some(byte_val);
             
         } else {
-            let sdb = self.storage_db.read().await;
+            let sdb = &self.storage_db;
             let read_path = format!("./cache/{}", hash.to_string());
             if sdb.contains(&hash) {
                 // println!("Found in Tier 2 cache db (Disc) -> Transferring to Tier 1 cache (Memory)");
