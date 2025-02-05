@@ -3,6 +3,7 @@ use dashmap::{DashMap, DashSet};
 use std::{hash::{DefaultHasher, Hash, Hasher}, sync::Arc};
 use tokio::sync::Mutex;
 use crate::ImgInfo;
+//use tokio::time::Instant;
 
 #[derive(Clone)]
 pub struct ImageCache {
@@ -43,16 +44,20 @@ impl ImageCache {
 
     pub async fn get(&mut self, hash: u64) -> Option<Vec<u8>> {
         let mdb = &self.mem_db;
+        //let before = Instant::now();
+        
         if mdb.contains_key(&hash) {
-            // println!("Found in Tier 1 cache (Memory)");
+            //println!("Found in Tier 1 cache (Memory)");
+            //println!("Elapsed time for tier 1: {:.2?}", before.elapsed());
             let byte_val = mdb.get(&hash).expect("Unable to get bytes").to_vec();
             return Some(byte_val);
             
         } else {
+            //println!("Elapsed time for tier 2: {:.2?}", before.elapsed());
             let sdb = &self.storage_db;
             let read_path = format!("./cache/{}", hash.to_string());
             if sdb.contains(&hash) {
-                // println!("Found in Tier 2 cache db (Disc) -> Transferring to Tier 1 cache (Memory)");
+                //println!("Found in Tier 2 cache db (Disc) -> Transferring to Tier 1 cache (Memory)");
                 let read_bytes = tokio::fs::read(read_path)
                     .await
                     .expect("Unable to read cache");
@@ -62,7 +67,7 @@ impl ImageCache {
                 .await
                 .expect("Unable to check")
             {
-                // println!("Found in Tier 2 cache (Disc) -> Transferring to Tier 1 cache (Memory)");
+                //println!("Found in Tier 2 cache (Disc) -> Transferring to Tier 1 cache (Memory)");
                 let read_bytes = tokio::fs::read(read_path)
                     .await
                     .expect("Unable to read bytes");

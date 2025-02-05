@@ -12,7 +12,8 @@ use cache::ImageCache;
 use image::ImageFormat;
 use tokio::sync::Mutex;
 use std::net::SocketAddr;
-use std::sync::{Arc, LazyLock};
+use std::sync::Arc;
+use once_cell::sync::Lazy;
 use tokio::net::TcpSocket;
 use transform::{resizer, rotate};
 use utils::{decoder, encoder};
@@ -91,20 +92,10 @@ pub struct AppState {
 
 const ADDR: [u8; 4] = [127, 0, 0, 1];
 
-static CACHE_DB: LazyLock<Arc<Mutex<ImageCache>>> = std::sync::LazyLock::new(ImageCache::new_cache);
-
+static CACHE_DB: Lazy<Arc<Mutex<ImageCache>>> = Lazy::new(|| ImageCache::new_cache());
 #[tokio::main]
 async fn main() {
     
-
-    // match db.try_lock() {
-    //     Ok(mut locked_db) => {
-    //         locked_db.insert(self.hash,Bytes::from(self.bytes.clone()));
-    //     },
-    //     Err(_) => {
-    //         println!("Unable to get lock");
-    //     }
-    // }
     let args = Args::parse();
 
     let app_state: AppState = AppState {

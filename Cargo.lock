@@ -1120,6 +1120,7 @@ dependencies = [
  "dashmap",
  "image",
  "mime_guess",
+ "once_cell",
  "rust-embed",
  "rustls",
  "serde",
