@@ -1,10 +1,9 @@
 use chrono::{DateTime, Utc};
 use dashmap::{DashMap, DashSet};
-use std::hash::{DefaultHasher, Hash, Hasher};
+use std::{hash::{DefaultHasher, Hash, Hasher}, sync::Arc};
+use tokio::sync::Mutex;
 use crate::ImgInfo;
-
-// const MAX_CACHE_SIZE_BYTES: u64 = 1024 * 1024 * 1024;
-// ImageCache{info:imginfo,hash:computed_hash}
+//use tokio::time::Instant;
 
 #[derive(Clone)]
 pub struct ImageCache {
@@ -15,13 +14,13 @@ pub struct ImageCache {
 }
 
 impl ImageCache {
-    pub fn new_cache() -> ImageCache {
-        ImageCache {
+    pub fn new_cache() -> Arc<Mutex<Self>> {
+        Arc::new(Mutex::new(Self {
             ttl_mem_db: DashMap::new(),
             ttl_storage_db: DashMap::new(),
             mem_db: DashMap::new(),
             storage_db: DashSet::new(),
-        }
+        }))
     }
 
     pub async fn insert(&mut self, image_bytes: Vec<u8>, imginfo: ImgInfo) {
@@ -45,16 +44,20 @@ impl ImageCache {
 
     pub async fn get(&mut self, hash: u64) -> Option<Vec<u8>> {
         let mdb = &self.mem_db;
+        //let before = Instant::now();
+        
         if mdb.contains_key(&hash) {
-            // println!("Found in Tier 1 cache (Memory)");
+            //println!("Found in Tier 1 cache (Memory)");
+            //println!("Elapsed time for tier 1: {:.2?}", before.elapsed());
             let byte_val = mdb.get(&hash).expect("Unable to get bytes").to_vec();
             return Some(byte_val);
             
         } else {
+            //println!("Elapsed time for tier 2: {:.2?}", before.elapsed());
             let sdb = &self.storage_db;
             let read_path = format!("./cache/{}", hash.to_string());
             if sdb.contains(&hash) {
-                // println!("Found in Tier 2 cache db (Disc) -> Transferring to Tier 1 cache (Memory)");
+                //println!("Found in Tier 2 cache db (Disc) -> Transferring to Tier 1 cache (Memory)");
                 let read_bytes = tokio::fs::read(read_path)
                     .await
                     .expect("Unable to read cache");
@@ -64,7 +67,7 @@ impl ImageCache {
                 .await
                 .expect("Unable to check")
             {
-                // println!("Found in Tier 2 cache (Disc) -> Transferring to Tier 1 cache (Memory)");
+                //println!("Found in Tier 2 cache (Disc) -> Transferring to Tier 1 cache (Memory)");
                 let read_bytes = tokio::fs::read(read_path)
                     .await
                     .expect("Unable to read bytes");
@@ -83,28 +86,3 @@ impl ImageCache {
             .expect("Unable to write");
     }
 }
-
-// pub async fn try_cleanup_cache(cache_dir: &str){
-//     let mut total_size = 0;
-//     let mut files = Vec::new();
-
-//     let mut entries = fs::read_dir(cache_dir).await.expect("Unable to read dir");
-//     while let Some(entry) = entries.next_entry().await.expect("Unable to get entry") {
-//         let metadata = entry.metadata().await.expect("Unable to get metadata");
-//         total_size += metadata.len();
-//         files.push((entry.path(), metadata.modified().expect("Unable to get modified info")));
-//     }
-
-//     if total_size > MAX_CACHE_SIZE_BYTES {
-//         files.sort_by_key(|&(_, modified)| modified);
-//         for (path, _) in files {
-//             if fs::try_exists(&path).await.expect("Unable to access path"){
-//                 total_size -= Path::new(&path).metadata().expect("Unable to compute total size").len();
-//                 fs::remove_file(&path).await.expect("Unable to remove file");
-//             }
-//             if total_size <= MAX_CACHE_SIZE_BYTES {
-//                 break;
-//             }
-//         }
-//     }
-// }
