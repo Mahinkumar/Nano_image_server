@@ -10,7 +10,9 @@ use axum::{Router, ServiceExt};
 
 use cache::ImageCache;
 use image::ImageFormat;
+use tokio::sync::Mutex;
 use std::net::SocketAddr;
+use std::sync::{Arc, LazyLock};
 use tokio::net::TcpSocket;
 use transform::{resizer, rotate};
 use utils::{decoder, encoder};
@@ -21,15 +23,26 @@ use serde::Deserialize;
 #[derive(Parser, Debug, Clone)]
 #[command(author, version, about="Nano Image Server is a tiny, blazingly fast service to serve images with support for basic image operation on fly.", long_about = None)]
 pub struct Args {
+    /// Defines the port the app is hosted on
     #[arg(long, short, default_value_t = 8000)]
     port: u16,
 
+    /// Base url of the app (needed when self hosting)
     #[arg(long, short)]
     base_url: Option<String>,
 
+    /// Toggle for Caching. Set to false by default and allows caching. 
     #[arg(long, short, default_value_t = false)]
     no_cache: bool,
-}
+
+    /// Limit for memory cache. 1024 MB is default
+    #[arg(long, short, default_value_t = 1024)]
+    mem_cache_limit: u32,
+
+    /// Limit for storage based caching. 4096 MB is default
+    #[arg(long, short, default_value_t = 1024*4)]
+    cache_limit: u32,
+}   
 
 #[derive(Deserialize, Debug, Hash, Clone)]
 #[serde(default = "default_param")]
@@ -74,14 +87,15 @@ pub struct ImgInfo {
 #[derive(Clone)]
 pub struct AppState {
     args: Args,
-    image_cache: ImageCache,
 }
 
 const ADDR: [u8; 4] = [127, 0, 0, 1];
 
+static CACHE_DB: LazyLock<Arc<Mutex<ImageCache>>> = std::sync::LazyLock::new(ImageCache::new_cache);
+
 #[tokio::main]
 async fn main() {
-    let cache_db: ImageCache = ImageCache::new_cache();
+    
 
     // match db.try_lock() {
     //     Ok(mut locked_db) => {
@@ -95,7 +109,6 @@ async fn main() {
 
     let app_state: AppState = AppState {
         args: args.clone(),
-        image_cache: cache_db,
     };
     let app = Router::new()
         .route("/{image}", get(handler))
@@ -135,7 +148,7 @@ async fn serve(app: Router, port: u16) {
 async fn handler(
     Path(image): Path<String>,
     Query(process_params): Query<ProcessParameters>,
-    State(mut app_state): State<AppState>,
+    State(app_state): State<AppState>,
 ) -> impl IntoResponse {
     let parsed_path: Vec<&str> = image.split('.').collect();
     let img_formats = parsed_path[1];
@@ -151,7 +164,7 @@ async fn handler(
     let hash = ImageCache::get_hash(&meta);
 
     if !app_state.args.no_cache {
-        match app_state.image_cache.get(hash).await {
+        match CACHE_DB.lock().await.get(hash).await {
             Some(val) => {
                 return (
                     [(header::CONTENT_TYPE, img_type)],
@@ -223,7 +236,7 @@ async fn handler(
                 bytes = encoder(decoded_img, img_format);
             }
             if !app_state.args.no_cache {
-                app_state.image_cache.insert(bytes.clone(), meta).await
+                CACHE_DB.lock().await.insert(bytes.clone(), meta).await
             }
             return (
                 [(header::CONTENT_TYPE, img_type)],

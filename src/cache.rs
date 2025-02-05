@@ -1,10 +1,8 @@
 use chrono::{DateTime, Utc};
 use dashmap::{DashMap, DashSet};
-use std::hash::{DefaultHasher, Hash, Hasher};
+use std::{hash::{DefaultHasher, Hash, Hasher}, sync::Arc};
+use tokio::sync::Mutex;
 use crate::ImgInfo;
-
-// const MAX_CACHE_SIZE_BYTES: u64 = 1024 * 1024 * 1024;
-// ImageCache{info:imginfo,hash:computed_hash}
 
 #[derive(Clone)]
 pub struct ImageCache {
@@ -15,13 +13,13 @@ pub struct ImageCache {
 }
 
 impl ImageCache {
-    pub fn new_cache() -> ImageCache {
-        ImageCache {
+    pub fn new_cache() -> Arc<Mutex<Self>> {
+        Arc::new(Mutex::new(Self {
             ttl_mem_db: DashMap::new(),
             ttl_storage_db: DashMap::new(),
             mem_db: DashMap::new(),
             storage_db: DashSet::new(),
-        }
+        }))
     }
 
     pub async fn insert(&mut self, image_bytes: Vec<u8>, imginfo: ImgInfo) {
@@ -83,28 +81,3 @@ impl ImageCache {
             .expect("Unable to write");
     }
 }
-
-// pub async fn try_cleanup_cache(cache_dir: &str){
-//     let mut total_size = 0;
-//     let mut files = Vec::new();
-
-//     let mut entries = fs::read_dir(cache_dir).await.expect("Unable to read dir");
-//     while let Some(entry) = entries.next_entry().await.expect("Unable to get entry") {
-//         let metadata = entry.metadata().await.expect("Unable to get metadata");
-//         total_size += metadata.len();
-//         files.push((entry.path(), metadata.modified().expect("Unable to get modified info")));
-//     }
-
-//     if total_size > MAX_CACHE_SIZE_BYTES {
-//         files.sort_by_key(|&(_, modified)| modified);
-//         for (path, _) in files {
-//             if fs::try_exists(&path).await.expect("Unable to access path"){
-//                 total_size -= Path::new(&path).metadata().expect("Unable to compute total size").len();
-//                 fs::remove_file(&path).await.expect("Unable to remove file");
-//             }
-//             if total_size <= MAX_CACHE_SIZE_BYTES {
-//                 break;
-//             }
-//         }
-//     }
-// }
