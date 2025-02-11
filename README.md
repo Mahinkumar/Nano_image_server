@@ -1,8 +1,8 @@
-> [!WARNING]  
-> This Project is a work in progress and is not suitable to be used at this moment.  <br>
-> At this point of time I'am working on a complete rewrite to take advantage of linux specific <br>
-> optimizations and more robust caching systems. V0.6.0-beta will drop support for windows. <br>
-> Star the repository for progress updates.
+> [!WARNING]
+> Project under active rewrite for Linux and caching optimizations <br>
+> V0.6.0-beta will be Linux-only |
+> Not production-ready |
+> ⭐ Star for updates
 
 # Nano Image Server
 ![Rust-Linux Worklflow](https://github.com/mahinkumar/Nano_image_server/actions/workflows/Rust_Linux.yml/badge.svg)
