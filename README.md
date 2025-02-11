@@ -1,12 +1,11 @@
 > [!WARNING]  
 > This Project is a work in progress and is not suitable to be used at this moment.  <br>
-> The Processing algorithms are far from optimal and will undergo massive Improvements. <br>
+> At this point of time I'am working on a complete rewrite to take advantage of linux specific <br>
+> optimizations and more robust caching systems. V0.6.0-beta will drop support for windows. <br>
 > Star the repository for progress updates.
 
 # Nano Image Server
 ![Rust-Linux Worklflow](https://github.com/mahinkumar/Nano_image_server/actions/workflows/Rust_Linux.yml/badge.svg)
-![Rust-Windows Worklflow](https://github.com/mahinkumar/Nano_image_server/actions/workflows/Rust_Windows.yml/badge.svg)
-
 
 <hr>
 
@@ -22,8 +21,7 @@ It is truly asynchronous, Memory safe and thread safe. Built upon axum and tokio
 ## Available Features
 1. Low latency Image delivery
 2. Caching and Instant Retrieval
-3. Support for Linux and Windows
-4. Basic image operations on fly via url queries
+3. Basic image operations on fly via url queries
 
 ## Usage
 
@@ -31,7 +29,6 @@ It is truly asynchronous, Memory safe and thread safe. Built upon axum and tokio
 2. Start the server
 ```bash
 ./nano_image_server #Linux
-start nano_image_server.exe #Windows
 ```
 3. Access the server from port 8000 in localhost.
 4. To get image go to `/<imagename>.<format>`
@@ -39,6 +36,9 @@ start nano_image_server.exe #Windows
 <hr>
 
 ## Availible Image operations
+
+> [!WARNING]  
+> All the image operations provided can change drastically until a stable release.
 
 ### Resizing Filters
 
