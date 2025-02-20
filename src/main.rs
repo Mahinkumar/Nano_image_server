@@ -1,5 +1,4 @@
-pub mod cache;
-pub mod transform;
+
 pub mod utils;
 pub mod cli;
 
@@ -11,6 +10,9 @@ use axum::{Router, ServiceExt};
 use cli::Args;
 use clap::Parser;
 
+#[cfg(feature = "plugins")]
+use plugins::log;
+
 use std::net::SocketAddr;
 use tokio::net::TcpSocket;
 
@@ -20,6 +22,9 @@ const ADDR: [u8; 4] = [127, 0, 0, 1];
 async fn main() {
     
     let args = Args::parse();
+
+    #[cfg(feature = "plugins")]
+    log();
 
     let app = Router::new()
         .route("/{image}", get(handler));
@@ -47,7 +52,6 @@ async fn serve(app: Router, port: u16) {
 async fn handler(
     Path(image): Path<String>,
 ) -> impl IntoResponse {
-
     // Due to rewrite the functions are incomplete here. 
 
     return (
