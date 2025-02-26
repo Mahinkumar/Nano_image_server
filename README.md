@@ -12,7 +12,9 @@
 ![image](https://github.com/user-attachments/assets/c43b43bf-b42e-4115-b225-da9a76f26894)
 <hr>
 
-> [!NOTE]  
+> [!NOTE]
+> **V0.6.0-beta** Release date: `02/03/2025` <br>
+> **v0.7.0-beta** Release date: `09/03/2025` <br>
 > Due to undergoing rewrite the documentation can be outdated.
 
 |<a href="https://docs.mahinkumar.com/nanoimageserver/"> Docs </a>|<a href="https://docs.mahinkumar.com/nanoimageserver/"> Usage </a> | <a href="https://docs.mahinkumar.com/nanoimageserver/"> References </a> |
