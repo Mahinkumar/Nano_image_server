@@ -1,12 +1,14 @@
 pub mod cli;
 pub mod resilience;
 pub mod cache;
+pub mod fs;
 
 use axum::extract::{Path, Request};
 use axum::http::header;
 use axum::response::IntoResponse;
 use axum::routing::get;
 use axum::{Router, ServiceExt};
+use cache::ImageCache;
 use clap::Parser;
 use cli::Args;
 
@@ -22,6 +24,7 @@ use tokio::net::TcpSocket;
 const ADDR: [u8; 4] = [127, 0, 0, 1];
 
 
+
 #[tokio::main]
 async fn main() {
     // Basic arguments are parsed here based on cli.rs file
@@ -33,6 +36,9 @@ async fn main() {
     // check the lib.rs in /plugins/src directory for more info
     #[cfg(feature = "plugins")]
     log();
+
+    let cache = ImageCache::init_cache(22);
+    cache.preload();
 
     // Basic router with image request handler and a health check endpoint
     // Todo: Include a security and rate limiting middleware before v0.6.0
@@ -60,6 +66,7 @@ async fn serve(app: Router, port: u16) {
     socket.set_nodelay(true).unwrap();
     socket.bind(addr).unwrap();
 
+    
     /*
     Socket backlog configuration.
 
