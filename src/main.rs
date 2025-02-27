@@ -1,33 +1,26 @@
 pub mod cli;
+pub mod resilience;
+pub mod cache;
 
 use axum::extract::{Path, Request};
 use axum::http::header;
 use axum::response::IntoResponse;
 use axum::routing::get;
-use axum::{Json, Router, ServiceExt};
-use cli::Args;
+use axum::{Router, ServiceExt};
 use clap::Parser;
+use cli::Args;
 
 #[cfg(feature = "plugins")]
 use plugins::log;
-use serde::{Deserialize, Serialize};
+use resilience::health;
 
 use std::net::SocketAddr;
 use tokio::net::TcpSocket;
 
-#[derive(Debug,Serialize, Deserialize)]
-enum Status{
-    Healthy,
-    Underload
-}
+
 /// Loopback addr (Localhost)
 const ADDR: [u8; 4] = [127, 0, 0, 1];
 
-#[derive(Debug, Serialize, Deserialize)]
-pub struct Health {
-    load: f32,
-    status: Status,
-}
 
 #[tokio::main]
 async fn main() {
@@ -45,14 +38,12 @@ async fn main() {
     // Todo: Include a security and rate limiting middleware before v0.6.0
     let app = Router::new()
         .route("/{image}", get(handler))
-        .route("/health",get(health))
+        .route("/health", get(health))
         .route("/status", get(health));
 
     // Serve the app
     serve(app, args.port).await;
 }
-
-
 
 /// Serves the router in specified port.
 /// Anything related to sockets and serving must be implemented here
@@ -72,7 +63,7 @@ async fn serve(app: Router, port: u16) {
     /*
     Socket backlog configuration.
 
-    Defines the maximum number of pending connections that are 
+    Defines the maximum number of pending connections that are
     queued by the operating system at any moment*/
     let listener = socket.listen(2048).unwrap();
 
@@ -82,37 +73,12 @@ async fn serve(app: Router, port: u16) {
         .unwrap();
 }
 
-
 /// Standard handler for the Image Server
-async fn handler(
-    Path(image): Path<String>,
-) -> impl IntoResponse {
-
-    // Due to rewrite the functions are incomplete here. 
+async fn handler(Path(image): Path<String>) -> impl IntoResponse {
+    // Due to rewrite the functions are incomplete here.
 
     return (
         [(header::CONTENT_TYPE, "text".to_owned())],
-        axum::body::Body::from(image)
-    )
-    
-}
-
-
-async fn health() -> impl IntoResponse{
-
-    // Placeholder load
-    // Implement safe and reliable health check
-    let load = 3.0;
-    
-    // Determine status based on load
-    let status = if load > 5.0 {
-        Status::Underload
-    } else {
-        Status::Healthy
-    };
-    
-    return (
-        [(header::CONTENT_TYPE, "application/json".to_owned())],
-        Json(Health { load, status })
+        axum::body::Body::from(image),
     );
 }

@@ -21,4 +21,6 @@ dashmap = "6.1.0"
 chrono = "0.4.39"
 once_cell = "1.20.2"
 plugins = { path = "./plugins", optional = true }
+quick_cache = "0.6.10"
+ahash = "0.8.11"
 
