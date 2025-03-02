@@ -10,3 +10,5 @@ tower-http = { version = "0.6.2", features = ["fs"]}
 serde = { version = "1.0.216", features = ["derive"] }
 rustls = "0.23.20"
 clap = { version = "4.5.24", features = ["derive"] }
+thiserror = "2.0.11"
+async-trait = "0.1.86"
