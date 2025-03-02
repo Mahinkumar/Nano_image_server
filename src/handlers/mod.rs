@@ -1,3 +1,3 @@
 mod http;
 mod middleware;
-mod router;
+pub mod router;
