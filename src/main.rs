@@ -1,10 +1,9 @@
 pub mod common;
+pub mod handlers;
+pub mod monitoring;
 pub mod security;
 pub mod storage;
-pub mod monitoring;
-pub mod handlers;
 
-fn main(){
+fn main() {
     println!("Nano Image Server");
-    
 }
