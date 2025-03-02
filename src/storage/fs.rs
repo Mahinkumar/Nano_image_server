@@ -1,7 +1,7 @@
 use super::*;
 use async_trait::async_trait;
 use tokio::fs;
-
+use std::path::PathBuf;
 struct FileSystem {
     image_path: String,
 }
@@ -13,8 +13,7 @@ impl AsyncFilesystem for FileSystem {
     }
 
     async fn get_image(&self, name: String) -> Result<Vec<u8>, FsError> {
-        let image_path = &self.image_path;
-        let path = format!("./{image_path}/{name}");
+        let path = PathBuf::from(&self.image_path).join(&name);
         match fs::read(path).await {
             Ok(image_stream) => Ok(image_stream),
             Err(_) => Err(FsError::ReadError(name)),
@@ -22,8 +21,8 @@ impl AsyncFilesystem for FileSystem {
     }
 
     async fn save_image(&self, name: String, image_stream: Vec<u8>) -> Result<(), FsError> {
-        let image_path = &self.image_path;
-        let path = format!("./{image_path}/{name}");
+        let path = PathBuf::from(&self.image_path).join(&name);
+        
         match fs::write(path, &image_stream).await {
             Ok(image_stream) => Ok(image_stream),
             Err(_) => Err(FsError::WriteError(name)),
@@ -31,8 +30,7 @@ impl AsyncFilesystem for FileSystem {
     }
 
     async fn del_image(&self, name: String) -> Result<(), FsError> {
-        let image_path = &self.image_path;
-        let path = format!("./{image_path}/{name}");
+        let path = PathBuf::from(&self.image_path).join(&name);
         match fs::try_exists(&path).await {
             Ok(boolean) => match boolean {
                 true => match fs::remove_file(path).await {
@@ -45,5 +43,13 @@ impl AsyncFilesystem for FileSystem {
         }
     }
 
+    fn validate_filename(name: &str) -> Result<(), FsError> {
+        if name.contains("..") || name.starts_with('/') {
+            return Err(FsError::InvalidName(name.to_string()));
+        }
+        Ok(())
+    }
+
     // async fn setup_directory(&self) -> Result<(), FsError>{}
 }
+
