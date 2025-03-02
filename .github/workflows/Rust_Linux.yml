@@ -11,12 +11,22 @@ env:
 
 jobs:
   build:
-
     runs-on: ubuntu-latest
 
     steps:
     - uses: actions/checkout@v4
     - name: Build
-      run: cargo build --verbose
+      run: cargo build --verbose --release
+    - name: Build with plugins
+      run: cargo build --verbose --release --features plugins 
+    
+
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v4
     - name: Run tests
       run: cargo test --verbose
+    - name: Run tests with plugins
+      run: cargo test --verbose --manifest-path plugins/Cargo.toml
