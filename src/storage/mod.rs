@@ -21,7 +21,7 @@ pub trait AsyncFilesystem {
     async fn get_image(&self, name: String) -> Result<Vec<u8>, FsError>;
     async fn save_image(&self, name: String, image_stream: Vec<u8>) -> Result<(), FsError>;
     async fn del_image(&self, name: String) -> Result<(), FsError>;
-    fn validate_filename(name: &str)->Result<(),FsError>;
+    fn validate_filename(name: &str) -> Result<(), FsError>;
     // async fn setup_directory(&self) -> Result<(), FsError>;
 }
 
