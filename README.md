@@ -4,7 +4,10 @@
 
 > [!NOTE]
 > Nano Image Server requires HTTPS (v0.6.0-beta+) <br>
-> TLS certificate is required. You can generate a sample using keygen.sh script included (linux)
+> TLS certificate is required. You can generate a sample using keygen.sh script included (linux) <br>
+> Image processing is now an optional feature that can be configured in during compilation. 
+
+
 
 
 # Nano Image Server
@@ -42,6 +45,11 @@ It is truly asynchronous, Memory safe and thread safe. Built upon axum and tokio
 
 > [!WARNING]  
 > A plugin based system for image operations is being developed. The provided API can change drastically until stable release.
+> V0.6.0-beta does not include image processing by default but you can opt in by the following method during building
+
+```bash
+cargo build --release -F processing 
+```
 
 ### Availible image operations
 | Operation | Query | Examples |
