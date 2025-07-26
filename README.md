@@ -1,10 +1,14 @@
 > [!WARNING]
-> Project under active rewrite for Linux and caching optimizations <br>
-> V0.6.0-beta will be Linux-only |
 > Not production-ready |
 > ⭐ Star for updates
 
+> [!NOTE]
+> Nano Image Server requires HTTPS (v0.6.0-beta+) <br>
+> TLS certificate is required. You can generate a sample using keygen.sh script included (linux)
+
+
 # Nano Image Server
+![Version](https://img.shields.io/badge/version-0.6.0--beta-orange?style=flat-square)
 ![Rust-Linux Worklflow](https://github.com/mahinkumar/Nano_image_server/actions/workflows/Rust_Linux.yml/badge.svg)
 
 <hr>
@@ -12,14 +16,15 @@
 ![image](https://github.com/user-attachments/assets/c43b43bf-b42e-4115-b225-da9a76f26894)
 <hr>
 
-Nano Image Server is a tiny, blazingly fast service to serve images with support for image operation on fly.
+Nano Image Server is a tiny, blazingly fast service to serve images with support for image operation on fly.<br>
+It is truly asynchronous, Memory safe and thread safe. Built upon axum and tokio runtime.
 
-It is truly asynchronous, Memory safe and thread safe. Built upon axum and tokio runtime. The image processing, encoding and decoding are done by the image crate. GPU support and caching are planned before the stable release.
 
 ## Available Features
 1. Low latency Image delivery
 2. Caching and Instant Retrieval
 3. Basic image operations on fly via url queries
+
 
 ## Usage
 

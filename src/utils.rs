@@ -1,4 +1,5 @@
 use image::{DynamicImage, ImageReader};
+
 use std::io::Cursor;
 
 pub fn decoder(image_bytes: Vec<u8>) -> DynamicImage {
