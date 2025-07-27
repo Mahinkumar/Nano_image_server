@@ -1,12 +1,9 @@
 #[cfg(feature = "processing")]
-pub mod processing;
+pub mod compute;
 
-#[cfg(feature = "processing")]
-pub mod transform;
+#[cfg(feature = "cache")]
+pub mod cache;
 
 pub mod server;
-
-#[cfg(feature = "processing")]
-pub mod utils;
 
 pub const ADDR: [u8; 4] = [127, 0, 0, 1];

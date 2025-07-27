@@ -3,8 +3,8 @@ use image::ImageFormat;
 use serde::Deserialize;
 
 #[cfg(feature = "processing")]
-use crate::transform::{resizer, rotate};
-use crate::utils::{decoder, encoder};
+use crate::compute::transform::{resizer, rotate};
+use crate::compute::utils::{decoder, encoder};
 
 #[derive(Deserialize, Debug, Hash, Clone)]
 #[serde(default = "default_param")]

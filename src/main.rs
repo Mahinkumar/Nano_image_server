@@ -1,18 +1,18 @@
 use axum::extract::Path;
 
 #[cfg(feature = "processing")]
-use nano_image_server::processing::ProcessParameters;
+use nano_image_server::compute::processing::ProcessParameters;
 #[cfg(feature = "processing")]
-use nano_image_server::processing::{image_processing, need_compute};
+use nano_image_server::compute::processing::{image_processing, need_compute};
 use nano_image_server::server::https::serve_https;
 
 #[cfg(feature = "processing")]
 use axum::extract::Query;
 
+use axum::Router;
 use axum::http::header;
 use axum::response::IntoResponse;
 use axum::routing::get;
-use axum::Router;
 
 use clap::Parser;
 
