@@ -1,3 +1,5 @@
+pub mod error; 
+
 #[cfg(feature = "processing")]
 pub mod compute;
 

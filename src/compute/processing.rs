@@ -5,10 +5,10 @@ use serde::Deserialize;
 #[cfg(feature = "processing")]
 use crate::compute::transform::{resizer, rotate};
 use crate::compute::utils::{decoder, encoder};
+use crate::error::{ImageServerError, Result};
 
 #[derive(Deserialize, Debug, Hash, Clone)]
 #[serde(default = "default_param")]
-
 pub struct ProcessParameters {
     resx: u32,
     resy: u32,
@@ -42,21 +42,22 @@ fn default_param() -> ProcessParameters {
 pub fn need_compute(process_params: &ProcessParameters) -> bool {
     process_params.resx != 0
         || process_params.resy != 0
-        || process_params.filter != "None".to_string()
-        || process_params.transform != "None".to_string()
-        || process_params.process != "None".to_string()
-        || process_params.to != "None".to_string()
+        || process_params.filter != "None"
+        || process_params.transform != "None"
+        || process_params.process != "None"
+        || process_params.to != "None"
 }
 
 pub fn image_processing(
     process_params: ProcessParameters,
     bytes: Vec<u8>,
     parsed_path: Vec<&str>,
-) -> Vec<u8> {
-    let mut decoded_img = decoder(bytes);
+) -> Result<Vec<u8>> {
+    let mut decoded_img = decoder(bytes)?;
 
     let img_formats = parsed_path[1];
 
+    // Resize if parameters specified
     if process_params.resx != 0 || process_params.resy != 0 {
         decoded_img = resizer(
             decoded_img,
@@ -65,41 +66,57 @@ pub fn image_processing(
             &process_params.resfilter,
         );
     }
-    if process_params.filter != "None".to_string() {
+    
+    // Apply filters
+    if process_params.filter != "None" {
         decoded_img = match process_params.filter.to_lowercase().as_str() {
             "blur" => decoded_img.blur(process_params.f_param as f32),
             "bw" => decoded_img.grayscale(),
             "brighten" => decoded_img.brighten(process_params.f_param),
             "contrast" => decoded_img.adjust_contrast(process_params.f_param as f32),
-            _ => decoded_img,
+            _ => return Err(ImageServerError::InvalidParameters(
+                format!("Unknown filter: {}", process_params.filter)
+            )),
         }
     }
-    if process_params.transform != "None".to_string() {
+    
+    // Apply transforms
+    if process_params.transform != "None" {
         decoded_img = match process_params.transform.to_lowercase().as_str() {
             "fliph" => decoded_img.fliph(),
             "flipv" => decoded_img.flipv(),
             "rotate" => rotate(decoded_img, process_params.t_param),
             "hue_rotate" => decoded_img.huerotate(process_params.t_param),
-            _ => decoded_img,
+            _ => return Err(ImageServerError::InvalidParameters(
+                format!("Unknown transform: {}", process_params.transform)
+            )),
         }
     }
-    if process_params.process != "None".to_string() {
+    
+    // Apply other processes
+    if process_params.process != "None" {
         decoded_img = match process_params.process.to_lowercase().as_str() {
             "invert" => {
                 decoded_img.invert();
                 decoded_img
             }
             "unsharpen" => decoded_img.unsharpen(process_params.p1 as f32, process_params.p2),
-            _ => decoded_img,
+            _ => return Err(ImageServerError::InvalidParameters(
+                format!("Unknown process: {}", process_params.process)
+            )),
         }
     }
-    let img_format: ImageFormat;
-    if process_params.to != "None".to_string() {
-        img_format =
-            ImageFormat::from_extension(&process_params.to).expect("Unable to parse Image format");
+    
+    // Determine output format
+    let img_format: ImageFormat = if process_params.to != "None" {
+        ImageFormat::from_extension(&process_params.to)
+            .ok_or_else(|| ImageServerError::InvalidParameters(
+                format!("Unsupported output format: {}", process_params.to)
+            ))?
     } else {
-        img_format =
-            ImageFormat::from_extension(img_formats).expect("Unable to parse Image format");
-    }
+        ImageFormat::from_extension(img_formats)
+            .ok_or_else(|| ImageServerError::InvalidFormat)?
+    };
+    
     encoder(decoded_img, img_format)
 }
