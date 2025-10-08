@@ -1,5 +1,5 @@
 > [!WARNING]
-> Not production-ready | v0.7.0-beta with experimental S3-FIFO cache
+> Not production-ready | v0.7.0-beta with experimental S3-FIFO cache<br>
 > ⭐ Star for updates
 
 > [!NOTE]
@@ -21,12 +21,12 @@ A tiny, blazingly fast image server with on-the-fly processing and intelligent c
 ## Features
 
 ### Core
-- **Low-latency image delivery** - Optimized async I/O with Tokio runtime
+- **Low-latency image delivery** - Optimized asynchronous I/O and Multithreading with Tokio runtime
 - **HTTPS-only** - Secure by default with TLS 1.3 support
-- **Modular design** - Enable only the features you need
+- **Modular design** - Enable only the features you will need during build time
 
 ### Optional Features
-- **S3-FIFO Cache** *(new in v0.7)* - Intelligent frequency-based caching achieving **85%+ hit rates**
+- **S3-FIFO Cache**- Intelligent frequency-based caching achieving **85%+ hit rates** on normal workloads
 - **On-the-fly processing** - Resize, transform, filter images via URL parameters
 - **Selective compilation** - Minimal builds for edge deployment
 
@@ -34,10 +34,9 @@ A tiny, blazingly fast image server with on-the-fly processing and intelligent c
 
 With S3-FIFO cache enabled:
 - **88.92% cache hit rate** on realistic workloads
-- Sub-millisecond cached response times
+- **10% Higher Throughput** and **Requests per second** improvements
+- Millisecond cached response times
 - Thread-safe concurrent access with lock-free frequency tracking
-- Automatic hot/cold data separation
-
 
 
 ## Usage
@@ -58,19 +57,16 @@ Full featured:
 ```bash
 cargo build --release --features cache,processing 
 ```
-3. Place images in the images/ directory
-```bash mkdir images
-cp your-images/* images/
-```
-4. Start the server
+
+Start the server
 ```bash
 # Basic usage
-./target/release/nano_image_server --cert-path ./certs
+./nano_image_server --cert-path ./certs 
 ```
 
 ### With cache (100 image capacity)
 ```bash
-./target/release/nano_image_server --cert-path ./certs --cache-capacity 100
+./nano_image_server --cert-path ./certs --cache-capacity 100
 ```
 
 `Use --help for all available parameters`
