@@ -33,7 +33,7 @@ A tiny, blazingly fast image server with on-the-fly processing and intelligent c
 ## Performance
 
 With S3-FIFO cache enabled:
-- **88.92% cache hit rate** on realistic workloads
+- **80%+ cache hit rate** on realistic workloads based on benchmarks
 - **10% Higher Throughput** and **Requests per second** improvements
 - Millisecond cached response times
 - Thread-safe concurrent access with lock-free frequency tracking
