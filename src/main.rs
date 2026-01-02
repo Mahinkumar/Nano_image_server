@@ -10,6 +10,7 @@ use axum::extract::Query;
 use nano_image_server::compute::processing::{ProcessParameters, image_processing, need_compute};
 
 use nano_image_server::error::{ImageServerError, Result};
+use nano_image_server::server::http::serve_http;
 use nano_image_server::server::https::serve_https;
 
 #[cfg(feature = "cache")]
@@ -35,15 +36,19 @@ pub struct Args {
     )]
     base_url: Option<String>,
 
+    #[arg(long, default_value_t = false)]
+    no_tls: bool,
+
     /// TLS certificate path. Necessary to run the application
     #[arg(
         long,
         short,
+        required_unless_present = "no_tls",
         value_name = "TLS_CERT_PATH",
         help = "TLS certificate path (required)",
         long_help = "Path to TLS certificate file (PEM format). \n\nYou can generate one with:\n $ openssl req -x509 -newkey rsa:4096 -nodes -keyout key.pem -out cert.pem -days 365\n\nPlace the key.pem and cert.pem inside a folder and use the folder's path as argument for this flag"
     )]
-    cert_path: PathBuf,
+    cert_path: Option<PathBuf>,
 
     /// Cache capacity (number of images to cache)
     #[cfg(feature = "cache")]
@@ -81,19 +86,21 @@ async fn main() {
 
     println!("Nano Image Server Starting...");
     println!(
-        "Serving images on port {} with url -> https://{}:{}",
+        "Serving images on port {} with url -> {}:{}",
         args.port, base_url, args.port
     );
 
     #[cfg(feature = "cache")]
     println!("Cache enabled with capacity: {}", args.cache_capacity);
 
-    println!(
-        "Test image with url -> https://{}:{}/image.jpg",
-        base_url, args.port
-    );
-
-    serve_https(app, args.port, args.cert_path).await;
+    if args.no_tls {
+        println!("WARNING: TLS disabled. Serving plain HTTP.");
+        serve_http(app, args.port).await;
+    } else {
+        // We can safely unwrap because clap ensures cert_path exists if no_tls is false
+        let cert_path = args.cert_path.expect("Cert path required for HTTPS");
+        serve_https(app, args.port, cert_path).await;
+    }
 }
 
 #[cfg(feature = "cache")]

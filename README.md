@@ -3,8 +3,7 @@
 > ⭐ Star for updates
 
 > [!NOTE]
-> Nano Image Server requires HTTPS (v0.6.0+) <br>
-> TLS certificate required - use included `keygen.sh` script (Linux) to generate test certs <br>
+> TLS certificate required for HTTPS- use included `keygen.sh` script (Linux) to generate test certs <br>
 > Image processing and caching are optional features configured at compile time
 
 # Nano Image Server
