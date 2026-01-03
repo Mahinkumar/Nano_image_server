@@ -254,15 +254,15 @@ async fn handle_image_request(
         "jpg" | "jpeg" => "image/jpeg",
         "webp" => "image/webp",
         "gif" => "image/gif",
+        "svg" => "image/svg+xml",
         _ => return Err(ImageServerError::InvalidFormat),
     };
 
     let bytes = fs::read(&canonical_path).await?;
 
-    // 8. Processing Block
     #[cfg(feature = "processing")]
     if let Some(params) = process_params {
-        if need_compute(&params) {
+        if extension != "svg" && need_compute(&params) {
             let processed = image_processing(params, bytes, &extension)?;
             return Ok((img_type.to_string(), processed));
         }
