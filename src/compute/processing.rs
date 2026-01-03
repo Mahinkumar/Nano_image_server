@@ -51,11 +51,11 @@ pub fn need_compute(process_params: &ProcessParameters) -> bool {
 pub fn image_processing(
     process_params: ProcessParameters,
     bytes: Vec<u8>,
-    parsed_path: Vec<&str>,
+    parsed_path: &str,
 ) -> Result<Vec<u8>> {
     let mut decoded_img = decoder(bytes)?;
 
-    let img_formats = parsed_path[1];
+    let img_formats = parsed_path;
 
     // Resize if parameters specified
     if process_params.resx != 0 || process_params.resy != 0 {

@@ -17,6 +17,7 @@ use nano_image_server::server::https::serve_https;
 use nano_image_server::cache::{Cache, s3fifo::S3Fifo};
 
 use clap::Parser;
+use tokio::fs;
 use std::path::PathBuf;
 use std::sync::Arc;
 use tokio::sync::RwLock;
@@ -136,7 +137,7 @@ async fn handler(
 async fn stats_handler(State(state): State<AppState>) -> String {
     let cache = state.cache.read().await;
     let stats = cache.stats();
-    
+
     format!(
         "Cache Statistics\n\
          ================\n\
@@ -144,14 +145,9 @@ async fn stats_handler(State(state): State<AppState>) -> String {
          Misses: {}\n\
          Hit Rate: {:.2}%\n\
          Current Size: {}/{}\n",
-        stats.hits,
-        stats.misses,
-        stats.hit_rate,
-        stats.size,
-        stats.capacity
+        stats.hits, stats.misses, stats.hit_rate, stats.size, stats.capacity
     )
 }
-
 
 #[cfg(not(feature = "cache"))]
 async fn handler(
@@ -223,40 +219,54 @@ async fn handle_image_request_cached(
     Ok((content_type, bytes))
 }
 
+
 async fn handle_image_request(
     image: String,
     #[cfg(feature = "processing")] process_params: Option<ProcessParameters>,
     #[cfg(not(feature = "processing"))] _process_params: Option<()>,
 ) -> Result<(String, Vec<u8>)> {
-    // Parse image path and format
-    let parsed_path: Vec<&str> = image.split('.').collect();
+    
+    let base_dir = fs::canonicalize("./images/").await
+        .map_err(|e| ImageServerError::Internal(format!("Base dir config error: {}", e)))?;
 
-    if parsed_path.len() != 2 {
+
+    if image.contains("..") || image.starts_with('/') || image.contains('\\') {
+        return Err(ImageServerError::InvalidFormat); 
+    }
+
+    let image_path = base_dir.join(&image);
+
+    let canonical_path = fs::canonicalize(&image_path).await
+        .map_err(|_| ImageServerError::NotFound { path: image.clone() })?;
+
+    if !canonical_path.starts_with(&base_dir) {
         return Err(ImageServerError::InvalidFormat);
     }
 
-    let img_formats = parsed_path[1];
-    let img_type = format!("image/{}", img_formats);
-    let input_path = format!("./images/{}", image);
+    let extension = canonical_path
+        .extension()
+        .and_then(|ext| ext.to_str())
+        .ok_or(ImageServerError::InvalidFormat)?
+        .to_lowercase();
 
-    // Check if file exists and read it
-    let bytes = tokio::fs::read(&input_path).await.map_err(|e| {
-        if e.kind() == std::io::ErrorKind::NotFound {
-            ImageServerError::NotFound { path: input_path }
-        } else {
-            ImageServerError::from(e)
-        }
-    })?;
+    let img_type = match extension.as_str() {
+        "png" => "image/png",
+        "jpg" | "jpeg" => "image/jpeg",
+        "webp" => "image/webp",
+        "gif" => "image/gif",
+        _ => return Err(ImageServerError::InvalidFormat),
+    };
 
-    // Process image if feature is enabled and params require it
+    let bytes = fs::read(&canonical_path).await?;
+
+    // 8. Processing Block
     #[cfg(feature = "processing")]
     if let Some(params) = process_params {
         if need_compute(&params) {
-            let processed = image_processing(params, bytes, parsed_path)?;
-            return Ok((img_type, processed));
+            let processed = image_processing(params, bytes, &extension)?;
+            return Ok((img_type.to_string(), processed));
         }
     }
 
-    // Return raw bytes if no processing needed
-    Ok((img_type, bytes))
+    Ok((img_type.to_string(), bytes))
 }
