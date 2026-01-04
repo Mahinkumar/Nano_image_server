@@ -197,11 +197,22 @@ async fn handle_image_request_cached(
     {
         let cache = state.cache.read().await;
         if let Some(cached_bytes) = cache.get(&cache_key) {
-            let parsed_path: Vec<&str> = image.split('.').collect();
-            if parsed_path.len() == 2 {
-                let img_type = format!("image/{}", parsed_path[1]);
-                return Ok((img_type, cached_bytes.clone()));
-            }
+            let extension = std::path::Path::new(&image)
+                .extension()
+                .and_then(|ext| ext.to_str())
+                .map(|s| s.to_lowercase())
+                .unwrap_or_default();
+
+            let img_type = match extension.as_str() {
+                "png" => "image/png",
+                "jpg" | "jpeg" => "image/jpeg",
+                "webp" => "image/webp",
+                "gif" => "image/gif",
+                "svg" => "image/svg+xml",
+                _ => "application/octet-stream",
+            };
+
+            return Ok((img_type.to_string(), cached_bytes.clone()));
         }
     }
 
