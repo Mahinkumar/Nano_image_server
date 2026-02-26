@@ -1,7 +1,3 @@
-> [!WARNING]
-> Not production-ready | v0.7.0-beta with experimental S3-FIFO cache<br>
-> ⭐ Star for updates
-
 > [!NOTE]
 > TLS certificate required for HTTPS- use included `keygen.sh` script (Linux) to generate test certs <br>
 > Image processing and caching are optional features configured at compile time
