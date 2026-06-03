@@ -1,6 +1,5 @@
 use thiserror::Error;
 
-
 #[derive(Error, Debug)]
 pub enum ImageServerError {
     /// Image file not found at specified path
@@ -58,22 +57,22 @@ impl ImageServerError {
         match self {
             ImageServerError::NotFound { .. } => 404,
             ImageServerError::InvalidFormat => 400,
-            
+
             #[cfg(feature = "processing")]
             ImageServerError::DecodeError(_) => 400,
-            
+
             #[cfg(feature = "processing")]
             ImageServerError::InvalidParameters(_) => 400,
-            
+
             #[cfg(feature = "processing")]
             ImageServerError::EncodeError(_) => 500,
-            
+
             #[cfg(feature = "processing")]
             ImageServerError::ProcessingError(_) => 500,
-            
+
             #[cfg(feature = "cache")]
             ImageServerError::CacheError(_) => 500,
-            
+
             ImageServerError::IoError(_) => 500,
             ImageServerError::TlsError(_) => 500,
             ImageServerError::Internal(_) => 500,
@@ -84,13 +83,15 @@ impl ImageServerError {
         match self {
             ImageServerError::NotFound { .. } => "Image not found".to_string(),
             ImageServerError::InvalidFormat => "Invalid or unsupported image format".to_string(),
-            
+
             #[cfg(feature = "processing")]
             ImageServerError::DecodeError(_) => "Failed to decode image".to_string(),
-            
+
             #[cfg(feature = "processing")]
-            ImageServerError::InvalidParameters(_) => "Invalid image processing parameters".to_string(),
-            
+            ImageServerError::InvalidParameters(_) => {
+                "Invalid image processing parameters".to_string()
+            }
+
             _ => "Internal server error".to_string(),
         }
     }

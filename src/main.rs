@@ -1,61 +1,35 @@
 use axum::Router;
-use axum::extract::{Path, State};
+use axum::extract::Path;
+
+#[cfg(feature = "processing")]
+use axum::extract::State;
+
 use axum::http::{StatusCode, header};
 use axum::response::{IntoResponse, Response};
 use axum::routing::get;
 
 #[cfg(feature = "processing")]
 use axum::extract::Query;
+use nano_image_server::args::Args;
 #[cfg(feature = "processing")]
 use nano_image_server::compute::processing::{ProcessParameters, image_processing, need_compute};
 
 use nano_image_server::error::{ImageServerError, Result};
+
+#[cfg(not(feature = "tls"))]
 use nano_image_server::server::http::serve_http;
+#[cfg(feature = "tls")]
 use nano_image_server::server::https::serve_https;
 
 #[cfg(feature = "cache")]
 use nano_image_server::cache::{Cache, s3fifo::S3Fifo};
-
-use clap::Parser;
 use tokio::fs;
-use std::path::PathBuf;
+
+#[cfg(feature = "cache")]
 use std::sync::Arc;
+
+#[cfg(feature = "cache")]
 use tokio::sync::RwLock;
-
-#[derive(Parser, Debug, Clone)]
-#[command(author, version, about="Nano Image Server is a tiny, blazingly fast service to serve images with support for basic image operation on fly.", long_about = None)]
-pub struct Args {
-    /// Defines the port the app is hosted on
-    #[arg(long, short, default_value_t = 8000)]
-    port: u16,
-
-    /// Base url
-    #[arg(
-        long,
-        short,
-        help = "Base url where application is hosted, Default is localhost"
-    )]
-    base_url: Option<String>,
-
-    #[arg(long, default_value_t = false)]
-    no_tls: bool,
-
-    /// TLS certificate path. Necessary to run the application
-    #[arg(
-        long,
-        short,
-        required_unless_present = "no_tls",
-        value_name = "TLS_CERT_PATH",
-        help = "TLS certificate path (required)",
-        long_help = "Path to TLS certificate file (PEM format). \n\nYou can generate one with:\n $ openssl req -x509 -newkey rsa:4096 -nodes -keyout key.pem -out cert.pem -days 365\n\nPlace the key.pem and cert.pem inside a folder and use the folder's path as argument for this flag"
-    )]
-    cert_path: Option<PathBuf>,
-
-    /// Cache capacity (number of images to cache)
-    #[cfg(feature = "cache")]
-    #[arg(long, default_value_t = 100)]
-    cache_capacity: usize,
-}
 
 #[cfg(feature = "cache")]
 #[derive(Clone)]
@@ -94,10 +68,14 @@ async fn main() {
     #[cfg(feature = "cache")]
     println!("Cache enabled with capacity: {}", args.cache_capacity);
 
-    if args.no_tls {
+    #[cfg(not(feature = "tls"))]
+    {
         println!("WARNING: TLS disabled. Serving plain HTTP.");
         serve_http(app, args.port).await;
-    } else {
+    }
+
+    #[cfg(feature = "tls")]
+    {
         // We can safely unwrap because clap ensures cert_path exists if no_tls is false
         let cert_path = args.cert_path.expect("Cert path required for HTTPS");
         serve_https(app, args.port, cert_path).await;
@@ -230,25 +208,27 @@ async fn handle_image_request_cached(
     Ok((content_type, bytes))
 }
 
-
 async fn handle_image_request(
     image: String,
     #[cfg(feature = "processing")] process_params: Option<ProcessParameters>,
     #[cfg(not(feature = "processing"))] _process_params: Option<()>,
 ) -> Result<(String, Vec<u8>)> {
-    
-    let base_dir = fs::canonicalize("./images/").await
+    let base_dir = fs::canonicalize("./images/")
+        .await
         .map_err(|e| ImageServerError::Internal(format!("Base dir config error: {}", e)))?;
 
-
     if image.contains("..") || image.starts_with('/') || image.contains('\\') {
-        return Err(ImageServerError::InvalidFormat); 
+        return Err(ImageServerError::InvalidFormat);
     }
 
     let image_path = base_dir.join(&image);
 
-    let canonical_path = fs::canonicalize(&image_path).await
-        .map_err(|_| ImageServerError::NotFound { path: image.clone() })?;
+    let canonical_path =
+        fs::canonicalize(&image_path)
+            .await
+            .map_err(|_| ImageServerError::NotFound {
+                path: image.clone(),
+            })?;
 
     if !canonical_path.starts_with(&base_dir) {
         return Err(ImageServerError::InvalidFormat);

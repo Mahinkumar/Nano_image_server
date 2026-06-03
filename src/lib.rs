@@ -1,4 +1,4 @@
-pub mod error; 
+pub mod error;
 
 #[cfg(feature = "processing")]
 pub mod compute;
@@ -6,6 +6,10 @@ pub mod compute;
 #[cfg(feature = "cache")]
 pub mod cache;
 
+pub mod args;
+
 pub mod server;
+
+// pub mod plugin;
 
 pub const ADDR: [u8; 4] = [127, 0, 0, 1];

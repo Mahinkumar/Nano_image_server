@@ -66,7 +66,7 @@ pub fn image_processing(
             &process_params.resfilter,
         );
     }
-    
+
     // Apply filters
     if process_params.filter != "None" {
         decoded_img = match process_params.filter.to_lowercase().as_str() {
@@ -74,12 +74,15 @@ pub fn image_processing(
             "bw" => decoded_img.grayscale(),
             "brighten" => decoded_img.brighten(process_params.f_param),
             "contrast" => decoded_img.adjust_contrast(process_params.f_param as f32),
-            _ => return Err(ImageServerError::InvalidParameters(
-                format!("Unknown filter: {}", process_params.filter)
-            )),
+            _ => {
+                return Err(ImageServerError::InvalidParameters(format!(
+                    "Unknown filter: {}",
+                    process_params.filter
+                )));
+            }
         }
     }
-    
+
     // Apply transforms
     if process_params.transform != "None" {
         decoded_img = match process_params.transform.to_lowercase().as_str() {
@@ -87,12 +90,15 @@ pub fn image_processing(
             "flipv" => decoded_img.flipv(),
             "rotate" => rotate(decoded_img, process_params.t_param),
             "hue_rotate" => decoded_img.huerotate(process_params.t_param),
-            _ => return Err(ImageServerError::InvalidParameters(
-                format!("Unknown transform: {}", process_params.transform)
-            )),
+            _ => {
+                return Err(ImageServerError::InvalidParameters(format!(
+                    "Unknown transform: {}",
+                    process_params.transform
+                )));
+            }
         }
     }
-    
+
     // Apply other processes
     if process_params.process != "None" {
         decoded_img = match process_params.process.to_lowercase().as_str() {
@@ -101,22 +107,26 @@ pub fn image_processing(
                 decoded_img
             }
             "unsharpen" => decoded_img.unsharpen(process_params.p1 as f32, process_params.p2),
-            _ => return Err(ImageServerError::InvalidParameters(
-                format!("Unknown process: {}", process_params.process)
-            )),
+            _ => {
+                return Err(ImageServerError::InvalidParameters(format!(
+                    "Unknown process: {}",
+                    process_params.process
+                )));
+            }
         }
     }
-    
+
     // Determine output format
     let img_format: ImageFormat = if process_params.to != "None" {
-        ImageFormat::from_extension(&process_params.to)
-            .ok_or_else(|| ImageServerError::InvalidParameters(
-                format!("Unsupported output format: {}", process_params.to)
-            ))?
+        ImageFormat::from_extension(&process_params.to).ok_or_else(|| {
+            ImageServerError::InvalidParameters(format!(
+                "Unsupported output format: {}",
+                process_params.to
+            ))
+        })?
     } else {
-        ImageFormat::from_extension(img_formats)
-            .ok_or_else(|| ImageServerError::InvalidFormat)?
+        ImageFormat::from_extension(img_formats).ok_or_else(|| ImageServerError::InvalidFormat)?
     };
-    
+
     encoder(decoded_img, img_format)
 }

@@ -4,19 +4,18 @@ use std::sync::atomic::{AtomicU8, AtomicU64, Ordering};
 
 pub struct S3Fifo<K, V> {
     cache: HashMap<K, CacheEntry<V>>,
-    
+
     small: VecDeque<K>,
     main: VecDeque<K>,
     ghost: VecDeque<K>,
-    
+
     small_capacity: usize,
     main_capacity: usize,
     ghost_capacity: usize,
-    
+
     hits: AtomicU64,
     misses: AtomicU64,
 }
-
 
 struct CacheEntry<V> {
     value: V,
@@ -40,15 +39,15 @@ pub struct CacheStats {
     pub capacity: usize,
 }
 
-impl<K, V> S3Fifo<K, V> 
-where 
+impl<K, V> S3Fifo<K, V>
+where
     K: Hash + Eq + Clone,
 {
     pub fn new(capacity: usize) -> Self {
         let small_capacity = capacity / 10;
         let main_capacity = capacity - small_capacity;
         let ghost_capacity = capacity;
-        
+
         Self {
             cache: HashMap::new(),
             small: VecDeque::new(),
@@ -61,7 +60,7 @@ where
             misses: AtomicU64::new(0),
         }
     }
-    
+
     pub fn stats(&self) -> CacheStats {
         let hits = self.hits.load(Ordering::Relaxed);
         let misses = self.misses.load(Ordering::Relaxed);
@@ -71,7 +70,7 @@ where
         } else {
             0.0
         };
-        
+
         CacheStats {
             hits,
             misses,
@@ -80,13 +79,12 @@ where
             capacity: self.small_capacity + self.main_capacity,
         }
     }
-    
+
     pub fn reset_stats(&self) {
         self.hits.store(0, Ordering::Relaxed);
         self.misses.store(0, Ordering::Relaxed);
     }
-    
-    
+
     fn evict_from_small(&mut self) {
         // Once removed, read the frequency counter of the removed entry with the key
         // Read frequency without holding a mutable borrow
@@ -120,7 +118,7 @@ where
                 if self.main.len() >= self.main_capacity {
                     self.evict_from_main();
                 }
-                
+
                 if let Some(entry) = self.cache.get_mut(&key) {
                     entry.freq.store(freq - 1, Ordering::Relaxed);
                     entry.location = QueueLocation::Main;
@@ -130,7 +128,7 @@ where
             }
         }
     }
-    
+
     fn evict_from_main(&mut self) {
         while let Some(key) = self.main.pop_front() {
             let freq = if let Some(entry) = self.cache.get(&key) {
@@ -138,7 +136,7 @@ where
             } else {
                 continue;
             };
-            
+
             if freq == 0 {
                 self.move_to_ghost(key);
                 return;
@@ -151,14 +149,14 @@ where
             }
         }
     }
-    
+
     fn move_to_ghost(&mut self, key: K) {
         if let Some(entry) = self.cache.get_mut(&key) {
             entry.location = QueueLocation::Ghost;
             entry.freq.store(0, Ordering::Relaxed);
-            
+
             self.ghost.push_back(key.clone());
-            
+
             if self.ghost.len() > self.ghost_capacity {
                 if let Some(old_ghost) = self.ghost.pop_front() {
                     self.cache.remove(&old_ghost);
@@ -176,12 +174,12 @@ where
         match self.cache.get(key) {
             Some(entry) if entry.location != QueueLocation::Ghost => {
                 self.hits.fetch_add(1, Ordering::Relaxed);
-                
-                let _ = entry.freq.fetch_update(
-                    Ordering::Relaxed,
-                    Ordering::Relaxed,
-                    |freq| if freq < 3 { Some(freq + 1) } else { None }
-                );
+
+                let _ = entry
+                    .freq
+                    .fetch_update(Ordering::Relaxed, Ordering::Relaxed, |freq| {
+                        if freq < 3 { Some(freq + 1) } else { None }
+                    });
                 Some(&entry.value)
             }
             _ => {
@@ -190,7 +188,7 @@ where
             }
         }
     }
-    
+
     fn insert(&mut self, key: K, value: V) -> Option<V> {
         if let Some(entry) = self.cache.get_mut(&key) {
             if entry.location != QueueLocation::Ghost {
@@ -199,50 +197,57 @@ where
                 return Some(old_value);
             }
         }
-        
+
         if let Some(entry) = self.cache.get(&key) {
             if entry.location == QueueLocation::Ghost {
                 self.ghost.retain(|k| k != &key);
                 self.cache.remove(&key);
-                
+
                 if self.main.len() >= self.main_capacity {
                     self.evict_from_main();
                 }
-                
+
                 self.main.push_back(key.clone());
-                self.cache.insert(key, CacheEntry {
-                    value,
-                    freq: AtomicU8::new(1),
-                    location: QueueLocation::Main,
-                });
+                self.cache.insert(
+                    key,
+                    CacheEntry {
+                        value,
+                        freq: AtomicU8::new(1),
+                        location: QueueLocation::Main,
+                    },
+                );
                 return None;
             }
         }
-        
+
         if self.small.len() >= self.small_capacity {
             self.evict_from_small();
         }
-        
+
         self.small.push_back(key.clone());
-        self.cache.insert(key, CacheEntry {
-            value,
-            freq: AtomicU8::new(0),
-            location: QueueLocation::Small,
-        });
-        
+        self.cache.insert(
+            key,
+            CacheEntry {
+                value,
+                freq: AtomicU8::new(0),
+                location: QueueLocation::Small,
+            },
+        );
+
         None
     }
-    
+
     fn contains(&self, key: &K) -> bool {
-        self.cache.get(key)
+        self.cache
+            .get(key)
             .map(|entry| entry.location != QueueLocation::Ghost)
             .unwrap_or(false)
     }
-    
+
     fn len(&self) -> usize {
         self.small.len() + self.main.len()
     }
-    
+
     fn clear(&mut self) {
         self.cache.clear();
         self.small.clear();

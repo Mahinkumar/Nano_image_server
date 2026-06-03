@@ -15,9 +15,16 @@ jobs:
 
     steps:
     - uses: actions/checkout@v4
-    - name: Build
-      run: cargo build --verbose --release
-    
+    - name: Build Minimal
+      run: cargo build --verbose --release 
+    - name: Build with Cache Feature Only
+      run: cargo build --verbose --release --features cache
+    - name: Build with TLS Feature Only
+      run: cargo build --verbose --release --features tls
+    - name: Build with Processing Feature Only
+      run: cargo build --verbose --release --features processing
+    - name: Build with full features
+      run: cargo build --verbose --release --features all  
 
   test:
     runs-on: ubuntu-latest
@@ -25,4 +32,4 @@ jobs:
     steps:
     - uses: actions/checkout@v4
     - name: Run tests
-      run: cargo test --verbose
+      run: cargo test --verbose --features all  
