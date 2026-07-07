@@ -14,9 +14,8 @@ thiserror = "2.0.17"
 
 [features]
 default = []
-all = [ "cache", "processing", "tls" ]
+all = [ "cache", "tls" ]
 
-processing = ["image"]
 cache = []
 tls = ["rustls","axum-server"]
 

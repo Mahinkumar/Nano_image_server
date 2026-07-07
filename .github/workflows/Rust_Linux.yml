@@ -21,8 +21,6 @@ jobs:
       run: cargo build --verbose --release --features cache
     - name: Build with TLS Feature Only
       run: cargo build --verbose --release --features tls
-    - name: Build with Processing Feature Only
-      run: cargo build --verbose --release --features processing
     - name: Build with full features
       run: cargo build --verbose --release --features all  
 

@@ -14,26 +14,6 @@ pub enum ImageServerError {
     #[error("unsupported or invalid image format")]
     InvalidFormat,
 
-    /// Image decoding failed
-    #[cfg(feature = "processing")]
-    #[error("failed to decode image: {0}")]
-    DecodeError(String),
-
-    /// Image encoding failed
-    #[cfg(feature = "processing")]
-    #[error("failed to encode image: {0}")]
-    EncodeError(String),
-
-    /// Image processing operation failed
-    #[cfg(feature = "processing")]
-    #[error("image processing failed: {0}")]
-    ProcessingError(String),
-
-    /// Invalid processing parameters
-    #[cfg(feature = "processing")]
-    #[error("invalid processing parameters: {0}")]
-    InvalidParameters(String),
-
     /// Cache operation failed
     #[cfg(feature = "cache")]
     #[error("cache error: {0}")]
@@ -58,18 +38,6 @@ impl ImageServerError {
             ImageServerError::NotFound { .. } => 404,
             ImageServerError::InvalidFormat => 400,
 
-            #[cfg(feature = "processing")]
-            ImageServerError::DecodeError(_) => 400,
-
-            #[cfg(feature = "processing")]
-            ImageServerError::InvalidParameters(_) => 400,
-
-            #[cfg(feature = "processing")]
-            ImageServerError::EncodeError(_) => 500,
-
-            #[cfg(feature = "processing")]
-            ImageServerError::ProcessingError(_) => 500,
-
             #[cfg(feature = "cache")]
             ImageServerError::CacheError(_) => 500,
 
@@ -84,27 +52,7 @@ impl ImageServerError {
             ImageServerError::NotFound { .. } => "Image not found".to_string(),
             ImageServerError::InvalidFormat => "Invalid or unsupported image format".to_string(),
 
-            #[cfg(feature = "processing")]
-            ImageServerError::DecodeError(_) => "Failed to decode image".to_string(),
-
-            #[cfg(feature = "processing")]
-            ImageServerError::InvalidParameters(_) => {
-                "Invalid image processing parameters".to_string()
-            }
-
             _ => "Internal server error".to_string(),
-        }
-    }
-}
-
-#[cfg(feature = "processing")]
-impl From<image::ImageError> for ImageServerError {
-    fn from(err: image::ImageError) -> Self {
-        match err {
-            image::ImageError::Decoding(_) => ImageServerError::DecodeError(err.to_string()),
-            image::ImageError::Encoding(_) => ImageServerError::EncodeError(err.to_string()),
-            image::ImageError::Unsupported(_) => ImageServerError::InvalidFormat,
-            _ => ImageServerError::ProcessingError(err.to_string()),
         }
     }
 }

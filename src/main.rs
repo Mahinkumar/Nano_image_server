@@ -1,29 +1,23 @@
 use axum::Router;
-use axum::extract::Path;
 
-#[cfg(feature = "cache")]  
+#[cfg(feature = "cache")]
 use axum::extract::State;
 
-use axum::http::{StatusCode, header};
-use axum::response::{IntoResponse, Response};
 use axum::routing::get;
 
-#[cfg(feature = "processing")]
-use axum::extract::Query;
+#[cfg(feature = "cache")]
+use nano_image_server::AppState;
 use nano_image_server::args::Args;
-#[cfg(feature = "processing")]
-use nano_image_server::compute::processing::{ProcessParameters, image_processing, need_compute};
 
-use nano_image_server::error::{ImageServerError, Result};
-
+#[cfg(not(feature="cache"))]
+use nano_image_server::handler::handler;
 #[cfg(not(feature = "tls"))]
 use nano_image_server::server::http::serve_http;
 #[cfg(feature = "tls")]
 use nano_image_server::server::https::serve_https;
 
 #[cfg(feature = "cache")]
-use nano_image_server::cache::{Cache, s3fifo::S3Fifo};
-use tokio::fs;
+use nano_image_server::cache::s3fifo::S3Fifo;
 
 #[cfg(feature = "cache")]
 use std::sync::Arc;
@@ -31,18 +25,14 @@ use std::sync::Arc;
 #[cfg(feature = "cache")]
 use tokio::sync::RwLock;
 
-#[cfg(feature = "cache")]
-#[derive(Clone)]
-struct AppState {
-    cache: Arc<RwLock<S3Fifo<String, Vec<u8>>>>,
-}
-
 #[tokio::main]
 async fn main() {
     let args = Args::parse();
 
     #[cfg(feature = "cache")]
     let app = {
+        use nano_image_server::{AppState, handler::{handler, stats_handler}};
+
         let cache = Arc::new(RwLock::new(S3Fifo::new(args.cache_capacity)));
         let state = AppState { cache };
         Router::new()
@@ -82,182 +72,3 @@ async fn main() {
     }
 }
 
-#[cfg(feature = "cache")]
-async fn handler(
-    State(state): State<AppState>,
-    Path(image): Path<String>,
-    #[cfg(feature = "processing")] Query(process_params): Query<ProcessParameters>,
-) -> Response {
-    #[cfg(feature = "processing")]
-    let result = handle_image_request_cached(state, image, Some(process_params)).await;
-
-    #[cfg(not(feature = "processing"))]
-    let result = handle_image_request_cached(state, image, None).await;
-
-    match result {
-        Ok((content_type, body)) => {
-            (StatusCode::OK, [(header::CONTENT_TYPE, content_type)], body).into_response()
-        }
-        Err(err) => {
-            let status_code = StatusCode::from_u16(err.status_code())
-                .unwrap_or(StatusCode::INTERNAL_SERVER_ERROR);
-            let message = err.user_message();
-
-            eprintln!("Error serving image: {}", err);
-
-            (status_code, message).into_response()
-        }
-    }
-}
-
-/// Stats endpoint to monitor cache performance
-#[cfg(feature = "cache")]
-async fn stats_handler(State(state): State<AppState>) -> String {
-    let cache = state.cache.read().await;
-    let stats = cache.stats();
-
-    format!(
-        "Cache Statistics\n\
-         ================\n\
-         Hits: {}\n\
-         Misses: {}\n\
-         Hit Rate: {:.2}%\n\
-         Current Size: {}/{}\n",
-        stats.hits, stats.misses, stats.hit_rate, stats.size, stats.capacity
-    )
-}
-
-#[cfg(not(feature = "cache"))]
-async fn handler(
-    Path(image): Path<String>,
-    #[cfg(feature = "processing")] Query(process_params): Query<ProcessParameters>,
-) -> Response {
-    #[cfg(feature = "processing")]
-    let result = handle_image_request(image, Some(process_params)).await;
-
-    #[cfg(not(feature = "processing"))]
-    let result = handle_image_request(image, None).await;
-
-    match result {
-        Ok((content_type, body)) => {
-            (StatusCode::OK, [(header::CONTENT_TYPE, content_type)], body).into_response()
-        }
-        Err(err) => {
-            let status_code = StatusCode::from_u16(err.status_code())
-                .unwrap_or(StatusCode::INTERNAL_SERVER_ERROR);
-            let message = err.user_message();
-
-            eprintln!("Error serving image: {}", err);
-
-            (status_code, message).into_response()
-        }
-    }
-}
-
-// Core image processing logic with caching
-#[cfg(feature = "cache")]
-async fn handle_image_request_cached(
-    state: AppState,
-    image: String,
-    #[cfg(feature = "processing")] process_params: Option<ProcessParameters>,
-    #[cfg(not(feature = "processing"))] _process_params: Option<()>,
-) -> Result<(String, Vec<u8>)> {
-    #[cfg(feature = "processing")]
-    let cache_key = if let Some(ref params) = process_params {
-        format!("{:?}:{:?}", image, params)
-    } else {
-        image.clone()
-    };
-
-    #[cfg(not(feature = "processing"))]
-    let cache_key = image.clone();
-
-    {
-        let cache = state.cache.read().await;
-        if let Some(cached_bytes) = cache.get(&cache_key) {
-            let extension = std::path::Path::new(&image)
-                .extension()
-                .and_then(|ext| ext.to_str())
-                .map(|s| s.to_lowercase())
-                .unwrap_or_default();
-
-            let img_type = match extension.as_str() {
-                "png" => "image/png",
-                "jpg" | "jpeg" => "image/jpeg",
-                "webp" => "image/webp",
-                "gif" => "image/gif",
-                "svg" => "image/svg+xml",
-                _ => "application/octet-stream",
-            };
-
-            return Ok((img_type.to_string(), cached_bytes.clone()));
-        }
-    }
-
-    #[cfg(feature = "processing")]
-    let (content_type, bytes) = handle_image_request(image.clone(), process_params).await?;
-
-    #[cfg(not(feature = "processing"))]
-    let (content_type, bytes) = handle_image_request(image.clone(), None).await?;
-
-    {
-        let mut cache = state.cache.write().await;
-        cache.insert(cache_key, bytes.clone());
-    }
-
-    Ok((content_type, bytes))
-}
-
-async fn handle_image_request(
-    image: String,
-    #[cfg(feature = "processing")] process_params: Option<ProcessParameters>,
-    #[cfg(not(feature = "processing"))] _process_params: Option<()>,
-) -> Result<(String, Vec<u8>)> {
-    let base_dir = fs::canonicalize("./images/")
-        .await
-        .map_err(|e| ImageServerError::Internal(format!("Base dir config error: {}", e)))?;
-
-    if image.contains("..") || image.starts_with('/') || image.contains('\\') {
-        return Err(ImageServerError::InvalidFormat);
-    }
-
-    let image_path = base_dir.join(&image);
-
-    let canonical_path =
-        fs::canonicalize(&image_path)
-            .await
-            .map_err(|_| ImageServerError::NotFound {
-                path: image.clone(),
-            })?;
-
-    if !canonical_path.starts_with(&base_dir) {
-        return Err(ImageServerError::InvalidFormat);
-    }
-
-    let extension = canonical_path
-        .extension()
-        .and_then(|ext| ext.to_str())
-        .ok_or(ImageServerError::InvalidFormat)?
-        .to_lowercase();
-
-    let img_type = match extension.as_str() {
-        "png" => "image/png",
-        "jpg" | "jpeg" => "image/jpeg",
-        "webp" => "image/webp",
-        "gif" => "image/gif",
-        "svg" => "image/svg+xml",
-        _ => return Err(ImageServerError::InvalidFormat),
-    };
-
-    let bytes = fs::read(&canonical_path).await?;
-
-    #[cfg(feature = "processing")]
-    if let Some(params) = process_params {
-        if extension != "svg" && need_compute(&params) {
-            let processed = image_processing(params, bytes, &extension)?;
-            return Ok((img_type.to_string(), processed));
-        }
-    }
-
-    Ok((img_type.to_string(), bytes))
-}
