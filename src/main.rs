@@ -1,74 +1,69 @@
-use axum::Router;
+use std::env;
 
-#[cfg(feature = "cache")]
-use axum::extract::State;
-
-use axum::routing::get;
-
-#[cfg(feature = "cache")]
-use nano_image_server::AppState;
-use nano_image_server::args::Args;
-
-#[cfg(not(feature="cache"))]
-use nano_image_server::handler::handler;
-#[cfg(not(feature = "tls"))]
-use nano_image_server::server::http::serve_http;
-#[cfg(feature = "tls")]
-use nano_image_server::server::https::serve_https;
-
-#[cfg(feature = "cache")]
-use nano_image_server::cache::s3fifo::S3Fifo;
-
-#[cfg(feature = "cache")]
-use std::sync::Arc;
-
-#[cfg(feature = "cache")]
-use tokio::sync::RwLock;
+use nano_image_server::{AppState, app::app, logging::init_logging};
+use tokio::{fs, signal};
 
 #[tokio::main]
 async fn main() {
-    let args = Args::parse();
+    init_logging();
 
-    #[cfg(feature = "cache")]
-    let app = {
-        use nano_image_server::{AppState, handler::{handler, stats_handler}};
+    tracing::info!("Starting Image Server");
 
-        let cache = Arc::new(RwLock::new(S3Fifo::new(args.cache_capacity)));
-        let state = AppState { cache };
-        Router::new()
-            .route("/{image}", get(handler))
-            .route("/_stats", get(stats_handler))
-            .with_state(state)
-    };
-
-    #[cfg(not(feature = "cache"))]
-    let app = Router::new().route("/{image}", get(handler));
-
-    let base_url = match &args.base_url {
-        Some(base) => base,
-        None => "localhost",
-    };
-
-    println!("Nano Image Server Starting...");
     println!(
-        "Serving images on port {} with url -> {}:{}",
-        args.port, base_url, args.port
+        " \n 
+     
+    ,________,
+    |        |     NANO IMAGE SERVER
+    | /\\   @ |     VERSION 0.8.0-BETA
+    |/__\\____|
+
+
+
+    https://github.com/mahinkumar/nano_image_server
+        "
     );
 
-    #[cfg(feature = "cache")]
-    println!("Cache enabled with capacity: {}", args.cache_capacity);
+    let port = env::var("NANO_IMG_PORT")
+        .ok()
+        .and_then(|p| p.parse().ok())
+        .unwrap_or(8000);
 
-    #[cfg(not(feature = "tls"))]
-    {
-        println!("WARNING: TLS disabled. Serving plain HTTP.");
-        serve_http(app, args.port).await;
-    }
+    let path = env::var("NANO_IMG_PATH")
+        .ok()
+        .unwrap_or("./images/".to_string());
 
-    #[cfg(feature = "tls")]
-    {
-        // We can safely unwrap because clap ensures cert_path exists if no_tls is false
-        let cert_path = args.cert_path.expect("Cert path required for HTTPS");
-        serve_https(app, args.port, cert_path).await;
-    }
+    let base_dir = fs::canonicalize(path)
+        .await
+        .expect("Unable to parse base_dir");
+
+    let app_state = AppState { base_dir };
+
+    let app = app(app_state);
+
+    let listener = tokio::net::TcpListener::bind(format!("0.0.0.0:{port}"))
+        .await
+        .unwrap();
+
+    let shutdown_signal = async {
+        let ctrl_c = signal::ctrl_c();
+        let terminate = async {
+            signal::unix::signal(signal::unix::SignalKind::terminate())
+                .expect("failed to install signal handler")
+                .recv()
+                .await;
+        };
+
+        tokio::select! {
+            _ = ctrl_c => tracing::info!("Shutdown signal received (SIGINT). \nExiting process safely. "),
+            _ = terminate => tracing::info!("Shutdown signal received (SIGTERM). \nExiting process safely."),
+        }
+    };
+
+    let url = format!("http://localhost:{port}");
+    tracing::info!(url = %url, "Server started :");
+
+    axum::serve(listener, app)
+        .with_graceful_shutdown(shutdown_signal)
+        .await
+        .unwrap();
 }
-

@@ -4,20 +4,18 @@ version = "0.7.0-beta"
 edition = "2024"
 
 [dependencies]
-tokio = { version = "1", features = ["rt-multi-thread","fs"] }
-axum = "0.8.1"
+tokio = { version = "1.52.3", features = ["rt-multi-thread","fs","signal"] }
+axum = "0.8.9"
 serde = { version = "1.0.216", features = ["derive"] }
-image = { version = "0.25.5", optional = true }
-rustls = { version = "0.23.27" , optional = true }
-axum-server = { version = "0.7.2", features = ["tls-rustls-no-provider"], optional = true}
 thiserror = "2.0.17"
+tracing-subscriber = { version = "0.3.23",  features = ["env-filter","fmt"]}
+tracing = "0.1.44"
 
 [features]
 default = []
-all = [ "cache", "tls" ]
+all = ["cache"]
 
 cache = []
-tls = ["rustls","axum-server"]
 
 [profile.release]
 opt-level = 3
