@@ -10,16 +10,19 @@ serde = { version = "1.0.216", features = ["derive"] }
 thiserror = "2.0.17"
 tracing-subscriber = { version = "0.3.23",  features = ["env-filter","fmt"]}
 tracing = "0.1.44"
+image = "0.25.10"
 
 [features]
 default = []
 all = ["cache"]
 
 cache = []
+plugins = []
 
 [profile.release]
 opt-level = 3
-lto = true
+lto = "fat"
 codegen-units = 1
 panic = "abort"
+incremental = false
 strip = true

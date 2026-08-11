@@ -5,3 +5,4 @@ dev:
 
 build:
     cargo build --release
+    

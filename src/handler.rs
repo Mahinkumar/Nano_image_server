@@ -15,16 +15,14 @@ pub async fn image_handler(
     let image_path = state.base_dir.join(&image);
 
     let canonical_path = fs::canonicalize(&image_path).await;
-
+    
     match canonical_path {
         Ok(canonical_path) => {
             if !canonical_path.starts_with(&state.base_dir) {
                 return StatusCode::BAD_REQUEST.into_response();
             }
 
-            let Some(extension) = canonical_path
-                .extension()
-                .and_then(|ext| ext.to_str()) else {
+            let Some(extension) = canonical_path.extension().and_then(|ext| ext.to_str()) else {
                 return StatusCode::BAD_REQUEST.into_response();
             };
 
@@ -45,4 +43,9 @@ pub async fn image_handler(
         }
         Err(_) => return StatusCode::NOT_FOUND.into_response(),
     }
+}
+
+pub async fn processing_handler(State(state): State<AppState>, Path(image): Path<String>) -> Response<Body> {
+    tracing::info!(image);
+    return StatusCode::INTERNAL_SERVER_ERROR.into_response();
 }
