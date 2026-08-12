@@ -1,6 +1,6 @@
 use std::env;
 
-use nano_image_server::{AppState, app::app, logging::init_logging};
+use nano_image_server::{AppState, app::app, logging::init_logging, plugin::Plugins};
 use tokio::{fs, signal};
 
 #[tokio::main]
@@ -36,7 +36,10 @@ async fn main() {
         .await
         .expect("Unable to parse base_dir");
 
-    let app_state = AppState { base_dir };
+    let plugins =  Plugins::init_registry();
+
+
+    let app_state = AppState { base_dir, plugins };
 
     let app = app(app_state);
 

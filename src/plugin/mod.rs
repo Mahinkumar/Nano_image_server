@@ -15,8 +15,9 @@ pub enum PluginOrdering {
     Last
 } 
 
-type ImagePlugin = fn(DynamicImage, Option<&str>) -> Result<DynamicImage,ParseError>;
+pub type ImagePlugin = fn(DynamicImage, Option<&str>) -> Result<DynamicImage,ParseError>;
 
+#[derive(Clone)]
 pub struct Plugins {
     registry: HashMap<String, (ImagePlugin, PluginOrdering)>
 }
