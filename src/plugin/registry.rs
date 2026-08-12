@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 
 use crate::plugin::error::ParseError;
-use crate::plugin::inbuilt::resize;
+use crate::plugin::inbuilt::resizer::resize;
 use crate::plugin::{ImagePlugin, PluginOrdering, Plugins};
 
 
@@ -18,7 +18,7 @@ impl Plugins{
     pub fn init_registry() -> Plugins {
         let mut registry: HashMap<String,(ImagePlugin, PluginOrdering)> = HashMap::new();
 
-        // Insert all plugins in here
+        // Register all plugins here
         registry.insert("resize".to_string(), (resize,PluginOrdering::Any));
 
         Plugins{
